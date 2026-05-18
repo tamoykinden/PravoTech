@@ -1,8 +1,19 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+class BaseConfig:
+    """Базовые настройки проекта."""
+
+    BASE_DIR = Path(__file__).parent
+    LOGS_DIR = BASE_DIR / 'logs'
+
+    @classmethod
+    def ensure_dirs(cls):
+        cls.LOGS_DIR.mkdir(exist_ok=True)
 
 class DBConfig:
     """Настройки подключения к БД."""
