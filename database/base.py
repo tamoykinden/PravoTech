@@ -6,7 +6,8 @@ from logger import bot_logger
 
 
 class Database:
-    """Класс для управления подключением к БД.
+    """
+    Класс для управления подключением к БД.
 
     Создает engine и sessionmaker
     """
@@ -29,16 +30,6 @@ class Database:
 
         bot_logger.info('Движок базы данных создан')
 
-    async def create_tables(self):
-        """Создает таблицы в БД."""
-
-        bot_logger.info('Создание таблиц в базе данных...')
-
-        async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-        bot_logger.info('Таблицы успешно созданы')
-
     def get_session(self):
         """Возвращает фабрику сессий."""
 
@@ -50,9 +41,9 @@ class Base(AsyncAttrs, DeclarativeBase):
 
     pass
 
-async def create_database(config: DBConfig)-> Database:
+async def init_connection(config: DBConfig)-> Database:
     """
-    Создает и инициализирует подключение к базе данных.
+    Инициализирует подключение к базе данных.
 
     Args:
         config: Конфиг с параметрами подключения
@@ -61,11 +52,9 @@ async def create_database(config: DBConfig)-> Database:
         Database: Экземпляр класса для работы с БД
     """
 
-    bot_logger.info('Запуск создания подключения к БД')
+    bot_logger.info('Запуск подключения к БД')
 
     db = Database(config)
-
-    await db.create_tables()
 
     bot_logger.info(f'База данных подключена')
 
