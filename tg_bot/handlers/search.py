@@ -5,9 +5,9 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ButtonConfig, MessageConfig
-from tg_bot.keyboards import MainMenuKeyboard
 from tg_bot.keyboards.back import BackKeyboard
 from tg_bot.keyboards.case import CasesListKeyboard
+from tg_bot.keyboards.main_menu import MainMenuKeyboard
 from tg_bot.services.search import SearchService
 
 router = Router()
@@ -48,15 +48,11 @@ async def perform_search(message: Message, state: FSMContext, session: AsyncSess
     service = SearchService(session)
     results = await service.search_cases(query)
 
-    await state.clear()
-
     if not results:
-        await message.answer(
-            MessageConfig.FOUND_NOTHING,
-            reply_markup=BackKeyboard().get_markup()
-        )
+        await message.answer(MessageConfig.FOUND_NOTHING)
         return
 
+    await state.clear()
     keyboard = CasesListKeyboard(results).get_markup()
     await message.answer(
         f'Найдено кейсов: {len(results)}\n\nВыберите подходящий:',
@@ -70,7 +66,7 @@ async def back_to_search(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(SearchStates.waiting_for_query)
     await callback.message.edit_text(
-        MessageConfig.MAIN_WORD,
+        MessageConfig.INSTRUCTIONS_FOR_SEARCH,
         reply_markup=BackKeyboard().get_markup()
     )
     await callback.answer()

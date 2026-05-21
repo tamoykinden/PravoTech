@@ -74,7 +74,7 @@ class BaseCRUD:
             **kwargs: Поля для обновления.
 
         Returns:
-            Обновлённый объект или None.
+            Обновленный объект или None.
         """
 
         obj = await self.get_by_id(obj_id)
@@ -97,7 +97,7 @@ class BaseCRUD:
             obj_id: ID объекта.
 
         Returns:
-            True если удалён, False если не найден.
+            True если удален, False если не найден.
         """
         
         obj = await self.get_by_id(obj_id)
