@@ -40,12 +40,13 @@ class CaseDetailKeyboard(BaseInlineKeyboard):
 
     def get_markup(self):
         """Возвращает готовую Inline-клавиатуру с документами."""
+
         buttons = []
 
         for doc in self.documents:
             buttons.append(
                 InlineKeyboardButton(
-                    text=f'📎 {doc.title}',
+                    text=f'{doc.title}',
                     callback_data=f'doc_{doc.id}'
                 )
             )

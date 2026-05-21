@@ -41,7 +41,7 @@ async def view_case(callback: CallbackQuery, session: AsyncSession):
     if not case:
         await callback.message.edit_text(
             MessageConfig.NO_FIND_CASES,
-            reply_markup=BackKeyboard().get_markup()
+            reply_markup=None
         )
         await callback.answer()
         return
@@ -52,7 +52,7 @@ async def view_case(callback: CallbackQuery, session: AsyncSession):
         keyboard = CaseDetailKeyboard(documents, case_id).get_markup()
         await callback.message.edit_text(text, reply_markup=keyboard)
     else:
-        await callback.message.edit_text(text, reply_markup=BackKeyboard().get_markup())
+        await callback.message.edit_text(text, reply_markup=None)
 
     await callback.answer()
 
