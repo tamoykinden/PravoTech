@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import ButtonConfig, MessageConfig
 from database.models import User
 from tg_bot.keyboards.back import BackKeyboard
 from tg_bot.keyboards.main_menu import MainMenuKeyboard
@@ -16,15 +17,13 @@ class FeedbackStates(StatesGroup):
     waiting_for_message = State()
 
 
-@router.message(F.text == 'Обратная связь')
+@router.message(F.text == ButtonConfig.FEEDBACK)
 async def start_feedback(message: Message, state: FSMContext):
     """Начать обратную связь."""
 
     await state.set_state(FeedbackStates.waiting_for_message)
     await message.answer(
-        'Напишите ваше сообщение или опишите ситуацию, которой нет в боте.\n\n'
-        'Мы рассмотрим и добавим её в ближайшее время.\n\n'
-        'Чтобы отменить — нажмите "Назад".',
+        MessageConfig.FEEDBACK,
         reply_markup=BackKeyboard().get_markup()
     )
 
@@ -40,16 +39,16 @@ async def save_feedback(
 
     feedback_text = message.text.strip()
 
-    if feedback_text.lower() == 'Назад':
+    if feedback_text.lower() == ButtonConfig.BACK:
         await state.clear()
         await message.answer(
-            'Обратная связь отменена.',
+            MessageConfig.FEEDBACK_CANCEL,
             reply_markup=MainMenuKeyboard().get_markup()
         )
         return
 
     if len(feedback_text) < 5:
-        await message.answer('Пожалуйста, напишите сообщение подробнее (минимум 5 символов).')
+        await message.answer(MessageConfig.PLEASE_FOR_FEEDBACK)
         return
 
     service = FeedbackService(session)
@@ -57,6 +56,6 @@ async def save_feedback(
 
     await state.clear()
     await message.answer(
-        'Спасибо за обратную связь! Мы обязательно рассмотрим ваше сообщение.',
+        MessageConfig.THANKS_FOR_FEEDBACK,
         reply_markup=MainMenuKeyboard().get_markup()
     )

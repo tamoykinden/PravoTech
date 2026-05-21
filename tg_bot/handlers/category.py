@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import ButtonConfig, MessageConfig
 from tg_bot.keyboards.back import BackKeyboard
 from tg_bot.keyboards.category import CasesByCategoryKeyboard, CategoriesKeyboard
 from tg_bot.services.case import CaseService
@@ -10,7 +11,7 @@ from tg_bot.services.category import CategoryService
 router = Router()
 
 
-@router.message(F.text == 'Категории')
+@router.message(F.text == ButtonConfig.CATEGORIES)
 async def show_categories(message: Message, session: AsyncSession):
     """Показать все категории."""
 
@@ -18,7 +19,7 @@ async def show_categories(message: Message, session: AsyncSession):
     categories = await service.get_all_categories()
 
     if not categories:
-        await message.answer('Категории пока не добавлены.')
+        await message.answer(MessageConfig.NO_CATEGORIES)
         return
 
     keyboard = CategoriesKeyboard(categories).get_markup()
@@ -39,7 +40,7 @@ async def show_cases_by_category(callback: CallbackQuery, session: AsyncSession)
 
     if not cases:
         await callback.message.edit_text(
-            'В этой категории пока нет кейсов.',
+            MessageConfig.NO_CASES_IN_CAT,
             reply_markup=BackKeyboard().get_markup()
         )
         await callback.answer()

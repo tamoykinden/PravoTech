@@ -4,6 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import ButtonConfig, MessageConfig
 from tg_bot.keyboards import MainMenuKeyboard
 from tg_bot.keyboards.back import BackKeyboard
 from tg_bot.keyboards.case import CasesListKeyboard
@@ -16,14 +17,13 @@ class SearchStates(StatesGroup):
     waiting_for_query = State()
 
 
-@router.message(F.text == 'Поиск кейса')
+@router.message(F.text == ButtonConfig.SEARCH)
 async def start_search(message: Message, state: FSMContext):
     """Начать поиск — запросить ключевые слова."""
 
     await state.set_state(SearchStates.waiting_for_query)
     await message.answer(
-        'Введите ключевые слова для поиска (через пробел):\n\n'
-        'Например: <i>шум соседи</i> или <i>возврат товара</i>',
+        MessageConfig.INSTRUCTIONS_FOR_SEARCH,
         reply_markup=BackKeyboard().get_markup()
     )
 
@@ -33,16 +33,16 @@ async def perform_search(message: Message, state: FSMContext, session: AsyncSess
     """Выполнить поиск по запросу."""
     query = message.text.strip()
 
-    if query == 'Назад':
+    if query == ButtonConfig.BACK:
         await state.clear()
         await message.answer(
-            '🔍 Поиск отменён.',
+            MessageConfig.SEARCH_CANCELED,
             reply_markup=MainMenuKeyboard().get_markup()
         )
         return
 
     if len(query) < 2:
-        await message.answer('Введите минимум 2 символа для поиска.')
+        await message.answer(MessageConfig.TWO_SIMBOLS)
         return
 
     service = SearchService(session)
@@ -52,9 +52,7 @@ async def perform_search(message: Message, state: FSMContext, session: AsyncSess
 
     if not results:
         await message.answer(
-            'Ничего не найдено.\n\n'
-            'Попробуйте изменить запрос или обратитесь в обратную связь, '
-            'если вашей ситуации нет в боте.',
+            MessageConfig.FOUND_NOTHING,
             reply_markup=BackKeyboard().get_markup()
         )
         return
@@ -72,7 +70,7 @@ async def back_to_search(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(SearchStates.waiting_for_query)
     await callback.message.edit_text(
-        'Введите ключевые слова для поиска (через пробел):',
+        MessageConfig.MAIN_WORD,
         reply_markup=BackKeyboard().get_markup()
     )
     await callback.answer()

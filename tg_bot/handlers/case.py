@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import ButtonConfig, MessageConfig
 from database.crud import DocumentCRUD
 from tg_bot.keyboards.back import BackKeyboard
 from tg_bot.keyboards.case import CaseDetailKeyboard, CasesListKeyboard
@@ -10,7 +11,7 @@ from tg_bot.services.case import CaseService
 router = Router()
 
 
-@router.message(F.text == 'Список кейсов')
+@router.message(F.text == ButtonConfig.CASES)
 async def list_cases(message: Message, session: AsyncSession):
     """Показать список всех кейсов."""
 
@@ -18,7 +19,7 @@ async def list_cases(message: Message, session: AsyncSession):
     cases = await service.get_all_cases()
 
     if not cases:
-        await message.answer('Кейсы пока не добавлены.')
+        await message.answer(MessageConfig.NO_CASES)
         return
 
     keyboard = CasesListKeyboard(cases).get_markup()
@@ -39,7 +40,7 @@ async def view_case(callback: CallbackQuery, session: AsyncSession):
 
     if not case:
         await callback.message.edit_text(
-            'Кейс не найден.',
+            MessageConfig.NO_FIND_CASES,
             reply_markup=BackKeyboard().get_markup()
         )
         await callback.answer()
@@ -66,7 +67,7 @@ async def send_document(callback: CallbackQuery, session: AsyncSession):
     document = await doc_crud.get_by_id(doc_id)
 
     if not document or not document.file_id:
-        await callback.answer('Файл не найден.', show_alert=True)
+        await callback.answer(MessageConfig.NO_FIND_FILE, show_alert=True)
         return
 
     await callback.message.answer_document(document.file_id, caption=f'{document.title}')
@@ -81,7 +82,7 @@ async def back_to_cases_list(callback: CallbackQuery, session: AsyncSession):
     cases = await service.get_all_cases()
 
     if not cases:
-        await callback.message.edit_text('Кейсы пока не добавлены.')
+        await callback.message.edit_text(MessageConfig.NO_CASES)
         await callback.answer()
         return
 
