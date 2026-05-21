@@ -84,3 +84,5 @@ class ButtonConfig:
     CATEGORIES = 'Категории'
     FEEDBACK = 'Обратная связь'
     SEARCH = 'Поиск кейса'
+    BACK_TO_CASES = 'Назад к кейсам'
+    BACK_TO_CATEGORIES = 'Назад к категориям'

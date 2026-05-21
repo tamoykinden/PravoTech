@@ -4,6 +4,7 @@ from typing import List
 
 from aiogram.types import InlineKeyboardButton
 
+from config import ButtonConfig
 from database.models import Case, Document
 from tg_bot.keyboards.base import BaseInlineKeyboard
 
@@ -51,7 +52,7 @@ class CaseDetailKeyboard(BaseInlineKeyboard):
 
         buttons.append(
             InlineKeyboardButton(
-                text='Назад к кейсам',
+                text=ButtonConfig.BACK_TO_CASES,
                 callback_data='back_to_cases'
             )
         )

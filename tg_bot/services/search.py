@@ -20,10 +20,10 @@ class SearchService(BaseService):
         Returns:
             List[Case]: Список найденных кейсов.
         """
+
         if not query or len(query.strip()) < 2:
             return []
 
-        # Преобразуем запрос в tsquery
         words = query.strip().split()
         tsquery = ' & '.join(words)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from aiogram.types import KeyboardButton
 
+from config import ButtonConfig
 from tg_bot.keyboards.base import BaseReplyKeyboard
 
 
@@ -12,12 +13,12 @@ class MainMenuKeyboard(BaseReplyKeyboard):
         """Возвращает готовую клавиатуру главного меню."""
 
         buttons = [
-            [KeyboardButton(text='Список кейсов')],
+            [KeyboardButton(text=ButtonConfig.CASES)],
             [
-                KeyboardButton(text='Поиск кейса'),
-                KeyboardButton(text='Категории'),
+                KeyboardButton(text=ButtonConfig.SEARCH),
+                KeyboardButton(text=ButtonConfig.CATEGORIES),
             ],
-            [KeyboardButton(text='Обратная связь')],
+            [KeyboardButton(text=ButtonConfig.FEEDBACK)],
         ]
 
         return self._build_reply_markup(buttons)
