@@ -1,6 +1,8 @@
 import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Computed, DateTime, ForeignKey, String, Text
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -68,6 +70,14 @@ class Case(Base):
         ForeignKey(CaseCategory.id),
         nullable=False,
         comment='Категория'
+    )
+    search_vector: Mapped[TSVECTOR] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('russian', coalesce(title, '') || ' ' || coalesce(solution, ''))",
+            persisted=True
+        ),
+        nullable=True
     )
 
     def __repr__(self) -> str:
