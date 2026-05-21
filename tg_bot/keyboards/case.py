@@ -51,7 +51,7 @@ class CaseDetailKeyboard(BaseInlineKeyboard):
 
         buttons.append(
             InlineKeyboardButton(
-                text='🔙 Назад к кейсам',
+                text='Назад к кейсам',
                 callback_data='back_to_cases'
             )
         )

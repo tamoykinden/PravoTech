@@ -50,7 +50,7 @@ class CasesByCategoryKeyboard(BaseInlineKeyboard):
             )
         buttons.append(
             InlineKeyboardButton(
-                text='🔙 Назад к категориям',
+                text='Назад к категориям',
                 callback_data='back_to_categories'
             )
         )

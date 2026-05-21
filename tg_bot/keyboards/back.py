@@ -11,5 +11,5 @@ class BackKeyboard(BaseReplyKeyboard):
     def get_markup(self):
         """Возвращает готовую клавиатуру с кнопкой 'Назад'."""
 
-        buttons = [[KeyboardButton(text='🔙 Назад')]]
+        buttons = [[KeyboardButton(text='Назад')]]
         return self._build_reply_markup(buttons)

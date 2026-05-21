@@ -1,6 +1,11 @@
 from tg_bot.core import BotCore
-from tg_bot.handlers.commands import commands_router
-from tg_bot.handlers.course import course_router
+from tg_bot.handlers import (
+    cases_router,
+    categories_router,
+    common_router,
+    feedback_router,
+    search_router,
+)
 
 
 def create_bot() -> BotCore:
@@ -14,7 +19,10 @@ def create_bot() -> BotCore:
 
     bot_core = BotCore()
 
-    bot_core.register_handlers(commands_router)
-    bot_core.register_handlers(course_router)
+    bot_core.register_handlers(common_router)
+    bot_core.register_handlers(categories_router)
+    bot_core.register_handlers(cases_router)
+    bot_core.register_handlers(search_router)
+    bot_core.register_handlers(feedback_router)
 
     return bot_core
