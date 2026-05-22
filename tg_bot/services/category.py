@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,3 +18,8 @@ class CategoryService(BaseService):
         """Получить все категории."""
         
         return await self.crud.get_all()
+
+    async def get_category_by_id(self, category_id: int) -> Optional[CaseCategory]:
+        """Получить категорию по ID."""
+
+        return await self.crud.get_by_id(category_id)

@@ -10,7 +10,7 @@ from tg_bot.keyboards.base import BaseInlineKeyboard
 
 
 class CategoriesKeyboard(BaseInlineKeyboard):
-    """Inline-клавиатура для выбора категории."""
+    """Инлайн-клавиатура для выбора категории."""
 
     def __init__(self, categories: List[CaseCategory], row_width: int = 2):
         super().__init__(row_width=row_width)
@@ -31,7 +31,7 @@ class CategoriesKeyboard(BaseInlineKeyboard):
 
 
 class CasesByCategoryKeyboard(BaseInlineKeyboard):
-    """Inline-клавиатура для выбора кейса из категории."""
+    """Инлайн-клавиатура для выбора кейса из категории."""
 
     def __init__(self, cases: List[Case], category_id: int, row_width: int = 1):
         super().__init__(row_width=row_width)
@@ -46,7 +46,7 @@ class CasesByCategoryKeyboard(BaseInlineKeyboard):
             buttons.append(
                 InlineKeyboardButton(
                     text=case.title,
-                    callback_data=f'case_{case.id}'
+                    callback_data=f'case_cat_{case.id}_{self.category_id}'
                 )
             )
         buttons.append(

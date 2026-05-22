@@ -75,6 +75,10 @@ class MessageConfig:
         'если вашей ситуации нет в боте.'
     )
     MAIN_WORD = 'Введите ключевые слова для поиска (через пробел):'
+    BACK_TO_MAIN_MENU = (
+        '🏠 Добро пожаловать в главное меню!\n\n'
+        'Выберите действие из списка ниже:'
+    )
 
 class ButtonConfig:
     """Текст кнопок."""
@@ -87,3 +91,4 @@ class ButtonConfig:
     BACK_TO_CASES = 'Назад к кейсам'
     BACK_TO_CATEGORIES = 'Назад к категориям'
     BACK_TO_SEARCH = 'Назад к поиску'
+    MAIN_MENU = 'Главное меню'
