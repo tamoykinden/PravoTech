@@ -42,8 +42,7 @@ class SearchHandler(BaseHandlers):
         await self.cleanup_current_and_previous(message)
 
         search_msg = await message.answer(
-            '🔎 Введите ключевые слова для поиска (через пробел):'
-            'Например: <i>шум соседи</i> или <i>возврат товара</i>',
+            MessageConfig.INSTRUCTIONS_FOR_SEARCH,
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text=ButtonConfig.MAIN_MENU, callback_data='back_to_main_menu')]
             ])
@@ -116,7 +115,7 @@ class SearchHandler(BaseHandlers):
 
         keyboard = CaseDetailKeyboard(documents, case.id).get_markup()
         keyboard.inline_keyboard.append(
-            [InlineKeyboardButton(text='Назад к результатам поиска', callback_data='back_to_search_results')]
+            [InlineKeyboardButton(text=ButtonConfig.BACK_TO_SEARCH_RESULTS, callback_data='back_to_search_results')]
         )
         keyboard.inline_keyboard.append(
             [InlineKeyboardButton(text=ButtonConfig.MAIN_MENU, callback_data='back_to_main_menu')]
@@ -165,8 +164,7 @@ class SearchHandler(BaseHandlers):
         await state.set_state(SearchStates.waiting_for_query)
 
         await callback.message.edit_text(
-            '🔎 Введите ключевые слова для поиска (через пробел):\n\n'
-            'Например: <i>шум соседи</i> или <i>возврат товара</i>',
+            MessageConfig.INSTRUCTIONS_FOR_SEARCH,
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text=ButtonConfig.MAIN_MENU, callback_data='back_to_main_menu')]
             ])
