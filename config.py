@@ -92,3 +92,4 @@ class ButtonConfig:
     BACK_TO_CATEGORIES = 'Назад к категориям'
     BACK_TO_SEARCH = 'Назад к поиску'
     MAIN_MENU = 'Главное меню'
+    BACK_TO_SEARCH_RESULTS = 'Назад к результатам поиска'
