@@ -1,11 +1,15 @@
-from aiogram import Router, types
+from aiogram import F, Router, types
 from aiogram.filters import Command
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import MessageConfig
-from tg_bot.handlers.base import BaseHandlers
-from tg_bot.keyboards.main_menu import MainMenuKeyboard, PDAgreementKeyboard, PDRetryKeyboard
 from database.models import User
+from tg_bot.handlers.base import BaseHandlers
+from tg_bot.keyboards.main_menu import (
+    MainMenuKeyboard,
+    PDAgreementKeyboard,
+    PDRetryKeyboard,
+)
 
 
 class CommonHandler(BaseHandlers):
@@ -15,9 +19,9 @@ class CommonHandler(BaseHandlers):
         self.router = Router()
         self.router.message(Command('start'))(self.cmd_start)
         self.router.message(Command('help'))(self.cmd_help)
-        self.router.callback_query(types.F.data == 'pd_agree')(self.pd_agree)
-        self.router.callback_query(types.F.data == 'pd_disagree')(self.pd_disagree)
-        self.router.callback_query(types.F.data == 'pd_retry')(self.pd_retry)
+        self.router.callback_query(F.data == 'pd_agree')(self.pd_agree)
+        self.router.callback_query(F.data == 'pd_disagree')(self.pd_disagree)
+        self.router.callback_query(F.data == 'pd_retry')(self.pd_retry)
 
     async def cmd_start(self, message: types.Message, user: User, session: AsyncSession):
         """Обработчик команды /start."""
