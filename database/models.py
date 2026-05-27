@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import BigInteger, Computed, DateTime, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Boolean, Computed, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
@@ -27,6 +27,11 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         comment='Последняя активность'
+    )
+    pd_agreed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        comment='Согласие на обработку персональных данных'
     )
 
     def __repr__(self) -> str:
