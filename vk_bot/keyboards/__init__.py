@@ -1,0 +1,1 @@
+from vk_bot.keyboards.main_menu import MainMenuKeyboard

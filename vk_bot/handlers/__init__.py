@@ -1,0 +1,1 @@
+from vk_bot.handlers.common import CommonHandler
