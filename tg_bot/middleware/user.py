@@ -4,7 +4,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from database.crud import UserCRUD
+from database.crud import TGUserCRUD
 
 
 class UserMiddleware(BaseMiddleware):
@@ -44,7 +44,7 @@ class UserMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         async with self.session_maker() as session:
-            user_crud = UserCRUD(session)
+            user_crud = TGUserCRUD(session)
             user = await user_crud.get_or_create(telegram_id=telegram_id)
 
             data['user'] = user

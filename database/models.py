@@ -104,10 +104,15 @@ class Document(Base):
         nullable=False,
         comment='Кейс'
     )
-    file_id: Mapped[str] = mapped_column(
+    tg_file_id: Mapped[str | None] = mapped_column(
         String(500),
-        nullable=False,
-        comment='Telegram file_id документа'
+        nullable=True,
+        comment='Telegram file_id документа',
+    )
+    vk_attachment: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment='VK attachment для быстрой отправки (doc{owner_id}_{id})',
     )
 
     def __repr__(self) -> str:

@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import MessageConfig
-from database.models import User
+from database.models import TGUser
 from tg_bot.handlers.base import BaseHandlers
 from tg_bot.keyboards.main_menu import (
     MainMenuKeyboard,
@@ -23,7 +23,7 @@ class CommonHandler(BaseHandlers):
         self.router.callback_query(F.data == 'pd_disagree')(self.pd_disagree)
         self.router.callback_query(F.data == 'pd_retry')(self.pd_retry)
 
-    async def cmd_start(self, message: types.Message, user: User, session: AsyncSession):
+    async def cmd_start(self, message: types.Message, user: TGUser, session: AsyncSession):
         """Обработчик команды /start."""
 
         if not user.pd_agreed:
@@ -43,7 +43,7 @@ class CommonHandler(BaseHandlers):
 
         await message.answer(MessageConfig.HELP)
 
-    async def pd_agree(self, callback: types.CallbackQuery, user: User, session: AsyncSession):
+    async def pd_agree(self, callback: types.CallbackQuery, user: TGUser, session: AsyncSession):
         """Пользователь согласился на обработку ПДн."""
 
         user.pd_agreed = True

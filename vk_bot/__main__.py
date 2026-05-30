@@ -1,17 +1,18 @@
+import asyncio
 import sys
 
 from vk_bot import create_bot
 
 
-def main() -> None:
+async def main() -> None:
     """
-    Основная функция запуска VK-бота.
+    Основная асинхронная функция запуска VK-бота.
     Обрабатывает ошибки и корректный выход.
     """
-
+    
     try:
         bot = create_bot()
-        bot.start()
+        await bot.start()
     except KeyboardInterrupt:
         print('Бот VK остановлен пользователем')
     except Exception as e:
@@ -20,4 +21,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from config import DBConfig
 from database.base import Database, init_connection
 from logger import bot_logger
+from tg_bot.middleware.pd_agreement import PDAgreementMiddleware
 from tg_bot.middleware.user import UserMiddleware
 
 
@@ -42,10 +43,15 @@ class BotCore:
         load_dotenv()
 
         self.tg_bot_token: Optional[str] = os.getenv('TG_BOT_TOKEN')
-        self.tg_proxy_url: Optional[str] = os.getenv('TG_PROXY_URL')
+        self.tg_proxy_url: Optional[str] = (os.getenv('TG_PROXY_URL') or '').strip() or None
 
         if not self.tg_bot_token:
             raise ValueError('TG_BOT_TOKEN не найден в .env')
+
+        if self.tg_proxy_url:
+            bot_logger.info('Telegram: используется прокси')
+        else:
+            bot_logger.info('Telegram: прямое подключение (без прокси)')
 
         session = AiohttpSession(proxy=self.tg_proxy_url) if self.tg_proxy_url else None
         self.bot: Bot = Bot(
@@ -105,11 +111,24 @@ class BotCore:
 
         await self.init_database()
 
-        self.dp.message.middleware(UserMiddleware(self.db.session_maker))
-        self.dp.callback_query.middleware(UserMiddleware(self.db.session_maker))
+        user_middleware = UserMiddleware(self.db.session_maker)
+        pd_middleware = PDAgreementMiddleware()
+
+        self.dp.message.middleware(user_middleware)
+        self.dp.message.middleware(pd_middleware)
+        self.dp.callback_query.middleware(user_middleware)
+        self.dp.callback_query.middleware(pd_middleware)
 
         bot_logger.info('Запуск бота')
-        await self.bot.delete_webhook(drop_pending_updates=True)
+        try:
+            await self.bot.delete_webhook(drop_pending_updates=True)
+        except Exception as e:
+            if self.tg_proxy_url:
+                raise RuntimeError(
+                    'Не удалось подключиться к Telegram через прокси. '
+                    'Проверьте TG_PROXY_URL или уберите его из .env для прямого подключения.'
+                ) from e
+            raise
         await self.dp.start_polling(self.bot)
 
     async def stop(self):
