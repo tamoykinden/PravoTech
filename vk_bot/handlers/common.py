@@ -1,17 +1,16 @@
-from vkbottle import BaseStateGroup, GroupEventType
+from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import ButtonConfig, MessageConfig
+from config import CallbackAction, MenuConfig, MessageConfig
 from database.models import VKUser
 from vk_bot.handlers.base import BaseHandlers
-from vk_bot.handlers.helpers import action_rule, random_id
-from vk_bot.keyboards.base import BaseInlineKeyboard, make_payload
 from vk_bot.keyboards.main_menu import (
     MainMenuKeyboard,
     PDAgreementKeyboard,
     PDRetryKeyboard,
 )
+from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class CommonHandler(BaseHandlers):
@@ -22,12 +21,17 @@ class CommonHandler(BaseHandlers):
         self._register()
 
     def _register(self) -> None:
-        start_texts = ['/start', 'Начать', 'Старт', 'начать', 'старт']
+        @self.labeler.private_message(text=list(MenuConfig.START_TEXTS))
+        async def cmd_start(
+            message: Message,
+            user: VKUser,
+            session: AsyncSession,
+            state_dispenser,
+        ):
+            await VkDispatchSupport.safe_delete_state(state_dispenser, message.peer_id)
 
-        @self.labeler.private_message(text=start_texts)
-        async def cmd_start(message: Message, user: VKUser, session: AsyncSession):
             if not user.pd_agreed:
-                await self.send_message(
+                await self.send_inline_message(
                     message,
                     MessageConfig.PD_AGREEMENT_TEXT,
                     PDAgreementKeyboard().get_markup(),
@@ -40,14 +44,14 @@ class CommonHandler(BaseHandlers):
                 MainMenuKeyboard().get_markup(),
             )
 
-        @self.labeler.private_message(text=['/help', 'Помощь', 'помощь'])
+        @self.labeler.private_message(text=list(MenuConfig.HELP_TEXTS))
         async def cmd_help(message: Message):
             await self.send_message(message, MessageConfig.HELP)
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('pd_agree'),
+            VkDispatchSupport.action_rule(CallbackAction.PD_AGREE),
         )
         async def pd_agree(
             event: MessageEvent,
@@ -56,20 +60,21 @@ class CommonHandler(BaseHandlers):
         ):
             user.pd_agreed = True
             await session.commit()
-            await event.send_empty_answer()
-            await event.send_message(
+            await self.safe_answer_event(event)
+            await self.safe_delete_event_message(event)
+            await self.restore_main_menu(
+                event.peer_id,
+                event.ctx_api,
                 MessageConfig.START,
-                keyboard=MainMenuKeyboard().get_markup(),
-                random_id=random_id(),
             )
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('pd_disagree'),
+            VkDispatchSupport.action_rule(CallbackAction.PD_DISAGREE),
         )
         async def pd_disagree(event: MessageEvent):
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await event.edit_message(
                 MessageConfig.PD_DISAGREE_TEXT,
                 keyboard=PDRetryKeyboard().get_markup(),
@@ -78,10 +83,10 @@ class CommonHandler(BaseHandlers):
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('pd_retry'),
+            VkDispatchSupport.action_rule(CallbackAction.PD_RETRY),
         )
         async def pd_retry(event: MessageEvent):
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await event.edit_message(
                 MessageConfig.PD_AGREEMENT_TEXT,
                 keyboard=PDAgreementKeyboard().get_markup(),
@@ -90,15 +95,16 @@ class CommonHandler(BaseHandlers):
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('back_to_main_menu'),
+            VkDispatchSupport.action_rule(CallbackAction.BACK_TO_MAIN_MENU),
         )
-        async def back_to_main_menu(event: MessageEvent, bot, state_dispenser):
-            await state_dispenser.delete(event.peer_id)
-            await event.send_empty_answer()
-            await event.send_message(
+        async def back_to_main_menu(event: MessageEvent, state_dispenser):
+            await VkDispatchSupport.safe_delete_state(state_dispenser, event.peer_id)
+            await self.safe_answer_event(event)
+            await self.safe_delete_event_message(event)
+            await self.restore_main_menu(
+                event.peer_id,
+                event.ctx_api,
                 MessageConfig.BACK_TO_MAIN_MENU,
-                keyboard=MainMenuKeyboard().get_markup(),
-                random_id=random_id(),
             )
 
 

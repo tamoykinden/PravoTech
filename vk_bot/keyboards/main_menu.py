@@ -1,5 +1,5 @@
-from config import ButtonConfig
-from vk_bot.keyboards.base import BaseInlineKeyboard, BaseReplyKeyboard, make_payload
+from config import ButtonConfig, CallbackAction
+from vk_bot.keyboards.base import BaseInlineKeyboard, BaseReplyKeyboard
 
 
 class MainMenuKeyboard(BaseReplyKeyboard):
@@ -11,7 +11,7 @@ class MainMenuKeyboard(BaseReplyKeyboard):
             [ButtonConfig.SEARCH, ButtonConfig.CATEGORIES],
             [ButtonConfig.FEEDBACK],
         ]
-        return self._build_reply_markup(buttons)
+        return self._build_reply_markup(buttons, one_time=True)
 
 
 class PDAgreementKeyboard(BaseInlineKeyboard):
@@ -19,8 +19,14 @@ class PDAgreementKeyboard(BaseInlineKeyboard):
 
     def get_markup(self) -> str:
         buttons = [
-            (ButtonConfig.PD_DISAGREE_BUTTON, make_payload('pd_disagree')),
-            (ButtonConfig.PD_AGREE_BUTTON, make_payload('pd_agree')),
+            (
+                ButtonConfig.PD_DISAGREE_BUTTON,
+                BaseInlineKeyboard.make_payload(CallbackAction.PD_DISAGREE),
+            ),
+            (
+                ButtonConfig.PD_AGREE_BUTTON,
+                BaseInlineKeyboard.make_payload(CallbackAction.PD_AGREE),
+            ),
         ]
         return self._build_inline_markup(buttons, row_width=2)
 
@@ -30,6 +36,9 @@ class PDRetryKeyboard(BaseInlineKeyboard):
 
     def get_markup(self) -> str:
         buttons = [
-            (ButtonConfig.PD_RETRY_BUTTON, make_payload('pd_retry')),
+            (
+                ButtonConfig.PD_RETRY_BUTTON,
+                BaseInlineKeyboard.make_payload(CallbackAction.PD_RETRY),
+            ),
         ]
         return self._build_inline_markup(buttons)

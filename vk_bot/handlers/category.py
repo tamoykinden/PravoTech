@@ -2,14 +2,13 @@ from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import ButtonConfig, MessageConfig
+from config import ButtonConfig, CallbackAction, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
-from vk_bot.handlers.helpers import action_rule
-from vk_bot.keyboards.base import BaseInlineKeyboard, make_payload
+from vk_bot.keyboards.base import BaseInlineKeyboard
 from vk_bot.keyboards.category import CasesByCategoryKeyboard, CategoriesKeyboard
-from vk_bot.keyboards.main_menu import MainMenuKeyboard
 from vk_bot.services.case import CaseService
 from vk_bot.services.category import CategoryService
+from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class CategoriesHandler(BaseHandlers):
@@ -19,6 +18,13 @@ class CategoriesHandler(BaseHandlers):
         self.labeler = BotLabeler()
         self._register()
 
+    @staticmethod
+    def _main_menu_button() -> tuple[str, dict]:
+        return (
+            ButtonConfig.MAIN_MENU,
+            BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_MAIN_MENU),
+        )
+
     def _register(self) -> None:
         @self.labeler.private_message(text=ButtonConfig.CATEGORIES)
         async def show_categories(message: Message, session: AsyncSession):
@@ -26,25 +32,23 @@ class CategoriesHandler(BaseHandlers):
             categories = await service.get_all_categories()
 
             if not categories:
-                await self.send_message(
-                    message,
+                await self.restore_main_menu(
+                    message.peer_id,
+                    message.ctx_api,
                     MessageConfig.NO_CATEGORIES,
-                    MainMenuKeyboard().get_markup(),
                 )
                 return
 
             await self.cleanup_current_and_previous(message)
 
             keyboard = CategoriesKeyboard(categories).get_markup()
-            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-            ])
-            await self.send_message(message, '📂 Выберите категорию:', keyboard)
+            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [self._main_menu_button()])
+            await self.send_inline_message(message, MessageConfig.SELECT_CATEGORY, keyboard)
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('cat'),
+            VkDispatchSupport.action_rule(CallbackAction.CATEGORY),
         )
         async def show_cases_by_category(event: MessageEvent, session: AsyncSession):
             category_id = event.payload['id']
@@ -55,41 +59,40 @@ class CategoriesHandler(BaseHandlers):
             cases = await case_service.get_cases_by_category(category_id)
 
             if not cases:
-                keyboard = BaseInlineKeyboard()._build_inline_markup([
-                    (ButtonConfig.BACK_TO_CATEGORIES, make_payload('back_to_categories')),
-                    (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                keyboard = BaseInlineKeyboard.build_inline_markup([
+                    (
+                        ButtonConfig.BACK_TO_CATEGORIES,
+                        BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_CATEGORIES),
+                    ),
+                    self._main_menu_button(),
                 ])
-                await event.send_empty_answer()
+                await self.safe_answer_event(event)
                 await event.edit_message(MessageConfig.NO_CASES_IN_CAT, keyboard=keyboard)
                 return
 
             keyboard = CasesByCategoryKeyboard(cases, category_id).get_markup()
-            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-            ])
+            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [self._main_menu_button()])
 
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await event.edit_message(
-                f'📂 Категория: {category.name}\n\nВыберите кейс:',
+                MessageConfig.SELECT_CATEGORY_CASES.format(name=category.name),
                 keyboard=keyboard,
             )
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('back_to_categories'),
+            VkDispatchSupport.action_rule(CallbackAction.BACK_TO_CATEGORIES),
         )
         async def back_to_categories(event: MessageEvent, session: AsyncSession):
             service = CategoryService(session)
             categories = await service.get_all_categories()
 
             keyboard = CategoriesKeyboard(categories).get_markup()
-            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-            ])
+            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [self._main_menu_button()])
 
-            await event.send_empty_answer()
-            await event.edit_message('📂 Выберите категорию:', keyboard=keyboard)
+            await self.safe_answer_event(event)
+            await event.edit_message(MessageConfig.SELECT_CATEGORY, keyboard=keyboard)
 
 
 categories_handler = CategoriesHandler()

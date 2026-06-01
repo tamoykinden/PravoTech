@@ -7,7 +7,7 @@ from vkbottle import Bot
 from config import DBConfig
 from database.base import init_connection
 from logger import bot_logger
-from vk_bot.middleware.user import make_bot_middleware, make_user_middleware
+from vk_bot.middleware.user import BotMiddleware, UserMiddleware
 
 
 class BotCore:
@@ -33,7 +33,16 @@ class BotCore:
 
     def register_handlers(self, router) -> None:
         """Регистрирует роутер в боте."""
+        if not hasattr(self, '_loaded_routers'):
+            self._loaded_routers = set()
+
+        router_id = id(router)
+        if router_id in self._loaded_routers:
+            bot_logger.warning(f'Роутер уже загружен, пропуск: {router}')
+            return
+
         self.bot.labeler.load(router)
+        self._loaded_routers.add(router_id)
         self._handlers_registered = True
         bot_logger.info(f'Загружен роутер: {router}')
 
@@ -42,13 +51,13 @@ class BotCore:
         if self._middlewares_registered or not self.db:
             return
 
-        user_middleware = make_user_middleware(self.db.session_maker, self.bot)
-        bot_middleware = make_bot_middleware(self.bot)
+        UserMiddleware.configure(self.db.session_maker, self.bot)
+        BotMiddleware.configure(self.bot)
 
-        self.bot.labeler.message_view.register_middleware(user_middleware)
-        self.bot.labeler.message_view.register_middleware(bot_middleware)
-        self.bot.labeler.raw_event_view.register_middleware(user_middleware)
-        self.bot.labeler.raw_event_view.register_middleware(bot_middleware)
+        self.bot.labeler.message_view.register_middleware(UserMiddleware)
+        self.bot.labeler.message_view.register_middleware(BotMiddleware)
+        self.bot.labeler.raw_event_view.register_middleware(UserMiddleware)
+        self.bot.labeler.raw_event_view.register_middleware(BotMiddleware)
 
         self._middlewares_registered = True
         bot_logger.info('Middleware VK-бота зарегистрированы')

@@ -2,11 +2,10 @@ from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, MessageEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import MessageConfig
-from database.crud import DocumentCRUD
+from config import CallbackAction, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
-from vk_bot.handlers.helpers import action_rule
 from vk_bot.services.document import DocumentService
+from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class DocumentHandler(BaseHandlers):
@@ -20,7 +19,7 @@ class DocumentHandler(BaseHandlers):
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('doc'),
+            VkDispatchSupport.action_rule(CallbackAction.DOCUMENT),
         )
         async def send_document(
             event: MessageEvent,
@@ -28,15 +27,14 @@ class DocumentHandler(BaseHandlers):
             bot,
         ):
             doc_id = event.payload['id']
-            crud = DocumentCRUD(session)
-            document = await crud.get_by_id(doc_id)
+            service = DocumentService(session)
+            document = await service.crud.get_by_id(doc_id)
 
             if not document or not document.vk_attachment:
                 await event.show_snackbar(MessageConfig.NO_FIND_FILE)
                 return
 
-            service = DocumentService(session)
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await service.send_document(bot.api, event.peer_id, document)
 
 

@@ -4,10 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import ABCAPI
 from vkbottle.tools import DocUploader
 
+from config import MessageConfig
 from database.crud import DocumentCRUD
 from database.models import Document
-from vk_bot.handlers.helpers import random_id
 from vk_bot.services.base import BaseService
+from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class DocumentService(BaseService):
@@ -36,9 +37,9 @@ class DocumentService(BaseService):
 
         await api.messages.send(
             peer_id=peer_id,
-            message=f'📄 {document.title}',
+            message=MessageConfig.DOCUMENT_TITLE.format(title=document.title),
             attachment=document.vk_attachment,
-            random_id=random_id(),
+            random_id=VkDispatchSupport.random_id(),
         )
 
     async def upload_to_vk(

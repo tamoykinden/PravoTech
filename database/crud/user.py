@@ -78,6 +78,3 @@ class VKUserRequestCRUD(BaseCRUD):
         """Записать просмотр кейса."""
 
         return await self.create(user_id=user_id, case_id=case_id)
-
-
-UserCRUD = TGUserCRUD

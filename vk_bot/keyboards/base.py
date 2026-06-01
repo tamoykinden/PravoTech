@@ -6,12 +6,6 @@ from typing import Any
 from vkbottle.tools import Callback, Keyboard, KeyboardButtonColor, Text
 
 
-def make_payload(action: str, **data: Any) -> dict[str, Any]:
-    """Формирует payload для inline-кнопок VK."""
-
-    return {'action': action, **data}
-
-
 class BaseKeyboard(ABC):
     """Базовый класс для всех клавиатур VK."""
 
@@ -23,8 +17,13 @@ class BaseKeyboard(ABC):
 class BaseReplyKeyboard(BaseKeyboard):
     """Базовый класс для reply-клавиатур."""
 
-    def _build_reply_markup(self, rows: list[list[str]]) -> str:
-        keyboard = Keyboard(one_time=False, inline=False)
+    def _build_reply_markup(
+        self,
+        rows: list[list[str]],
+        *,
+        one_time: bool = False,
+    ) -> str:
+        keyboard = Keyboard(one_time=one_time, inline=False)
         for row in rows:
             keyboard.row()
             for label in row:
@@ -32,11 +31,22 @@ class BaseReplyKeyboard(BaseKeyboard):
         return keyboard.get_json()
 
 
+class EmptyReplyKeyboard(BaseReplyKeyboard):
+    """Пустая reply-клавиатура — явно скрывает кнопки главного меню."""
+
+    def get_markup(self) -> str:
+        return self._build_reply_markup([])
+
+
 class BaseInlineKeyboard(BaseKeyboard):
     """Базовый класс для inline-клавиатур."""
 
-    def _build_inline_markup(
-        self,
+    @staticmethod
+    def make_payload(action: str, **data: Any) -> dict[str, Any]:
+        return {'action': action, **data}
+
+    @staticmethod
+    def build_inline_markup(
         buttons: list[tuple[str, dict[str, Any]]],
         row_width: int = 1,
     ) -> str:
@@ -49,6 +59,13 @@ class BaseInlineKeyboard(BaseKeyboard):
                 color=KeyboardButtonColor.PRIMARY,
             )
         return keyboard.get_json()
+
+    def _build_inline_markup(
+        self,
+        buttons: list[tuple[str, dict[str, Any]]],
+        row_width: int = 1,
+    ) -> str:
+        return self.build_inline_markup(buttons, row_width=row_width)
 
     @staticmethod
     def append_buttons(

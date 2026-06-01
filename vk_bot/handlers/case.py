@@ -2,13 +2,12 @@ from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import ButtonConfig, MessageConfig
+from config import ButtonConfig, CallbackAction, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
-from vk_bot.handlers.helpers import action_rule
-from vk_bot.keyboards.base import BaseInlineKeyboard, make_payload
+from vk_bot.keyboards.base import BaseInlineKeyboard
 from vk_bot.keyboards.case import CaseDetailKeyboard, CasesListKeyboard
-from vk_bot.keyboards.main_menu import MainMenuKeyboard
 from vk_bot.services.case import CaseService
+from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class CasesHandler(BaseHandlers):
@@ -18,6 +17,13 @@ class CasesHandler(BaseHandlers):
         self.labeler = BotLabeler()
         self._register()
 
+    @staticmethod
+    def _main_menu_button() -> tuple[str, dict]:
+        return (
+            ButtonConfig.MAIN_MENU,
+            BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_MAIN_MENU),
+        )
+
     def _register(self) -> None:
         @self.labeler.private_message(text=ButtonConfig.CASES)
         async def list_cases(message: Message, session: AsyncSession):
@@ -25,37 +31,38 @@ class CasesHandler(BaseHandlers):
             cases = await service.get_all_cases()
 
             if not cases:
-                await self.send_message(
-                    message,
+                await self.restore_main_menu(
+                    message.peer_id,
+                    message.ctx_api,
                     MessageConfig.NO_CASES,
-                    MainMenuKeyboard().get_markup(),
                 )
                 return
 
             await self.cleanup_current_and_previous(message)
 
             keyboard = CasesListKeyboard(cases).get_markup()
-            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-            ])
-            await self.send_message(message, '📋 Выберите кейс:', keyboard)
+            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [self._main_menu_button()])
+            await self.send_inline_message(message, MessageConfig.SELECT_CASE, keyboard)
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('case_list'),
+            VkDispatchSupport.action_rule(CallbackAction.CASE_LIST),
         )
         async def view_case_from_list(event: MessageEvent, session: AsyncSession):
             case_id = event.payload['id']
             await self._show_case(event, session, case_id, back_buttons=[
-                (ButtonConfig.BACK_TO_CASES, make_payload('back_to_cases')),
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                (
+                    ButtonConfig.BACK_TO_CASES,
+                    BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_CASES),
+                ),
+                self._main_menu_button(),
             ])
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('case_cat'),
+            VkDispatchSupport.action_rule(CallbackAction.CASE_CAT),
         )
         async def view_case_from_category(event: MessageEvent, session: AsyncSession):
             case_id = event.payload['id']
@@ -63,16 +70,22 @@ class CasesHandler(BaseHandlers):
             await self._show_case(event, session, case_id, back_buttons=[
                 (
                     ButtonConfig.BACK_TO_CASES,
-                    make_payload('back_to_cases_from_cat', category_id=category_id),
+                    BaseInlineKeyboard.make_payload(
+                        CallbackAction.BACK_TO_CASES_FROM_CAT,
+                        category_id=category_id,
+                    ),
                 ),
-                (ButtonConfig.BACK_TO_CATEGORIES, make_payload('back_to_categories')),
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                (
+                    ButtonConfig.BACK_TO_CATEGORIES,
+                    BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_CATEGORIES),
+                ),
+                self._main_menu_button(),
             ])
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('back_to_cases'),
+            VkDispatchSupport.action_rule(CallbackAction.BACK_TO_CASES),
         )
         async def back_to_cases_list(event: MessageEvent, session: AsyncSession):
             await self._show_cases_list(event, session)
@@ -80,7 +93,7 @@ class CasesHandler(BaseHandlers):
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('back_to_cases_from_cat'),
+            VkDispatchSupport.action_rule(CallbackAction.BACK_TO_CASES_FROM_CAT),
         )
         async def back_to_cases_by_category(event: MessageEvent, session: AsyncSession):
             category_id = event.payload['category_id']
@@ -89,12 +102,15 @@ class CasesHandler(BaseHandlers):
 
             keyboard = CasesListKeyboard(cases).get_markup()
             keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.BACK_TO_CATEGORIES, make_payload('back_to_categories')),
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                (
+                    ButtonConfig.BACK_TO_CATEGORIES,
+                    BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_CATEGORIES),
+                ),
+                self._main_menu_button(),
             ])
 
-            await event.send_empty_answer()
-            await event.edit_message('📋 Выберите кейс:', keyboard=keyboard)
+            await self.safe_answer_event(event)
+            await event.edit_message(MessageConfig.SELECT_CASE, keyboard=keyboard)
 
     async def _show_case(
         self,
@@ -110,7 +126,7 @@ class CasesHandler(BaseHandlers):
         keyboard = CaseDetailKeyboard(documents, case.id).get_markup()
         keyboard = BaseInlineKeyboard.append_buttons(keyboard, back_buttons)
 
-        await event.send_empty_answer()
+        await self.safe_answer_event(event)
         await event.edit_message(text, keyboard=keyboard)
 
     async def _show_cases_list(self, event: MessageEvent, session: AsyncSession) -> None:
@@ -118,12 +134,10 @@ class CasesHandler(BaseHandlers):
         cases = await service.get_all_cases()
 
         keyboard = CasesListKeyboard(cases).get_markup()
-        keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-            (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-        ])
+        keyboard = BaseInlineKeyboard.append_buttons(keyboard, [self._main_menu_button()])
 
-        await event.send_empty_answer()
-        await event.edit_message('📋 Выберите кейс:', keyboard=keyboard)
+        await self.safe_answer_event(event)
+        await event.edit_message(MessageConfig.SELECT_CASE, keyboard=keyboard)
 
 
 cases_handler = CasesHandler()

@@ -16,6 +16,3 @@ class VKFeedbackCRUD(BaseCRUD):
 
     def __init__(self, session: AsyncSession):
         super().__init__(VKFeedback, session)
-
-
-FeedbackCRUD = TGFeedbackCRUD

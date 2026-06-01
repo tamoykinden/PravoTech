@@ -2,15 +2,14 @@ from vkbottle import BaseStateGroup, GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import ButtonConfig, MessageConfig
+from config import ButtonConfig, CallbackAction, MenuConfig, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
-from vk_bot.handlers.helpers import action_rule, random_id
-from vk_bot.keyboards.base import BaseInlineKeyboard, make_payload
+from vk_bot.keyboards.base import BaseInlineKeyboard
 from vk_bot.keyboards.case import CaseDetailKeyboard
-from vk_bot.keyboards.main_menu import MainMenuKeyboard
 from vk_bot.keyboards.search import SearchCasesListKeyboard
 from vk_bot.services.case import CaseService
 from vk_bot.services.search import SearchService
+from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class SearchStates(BaseStateGroup):
@@ -25,17 +24,24 @@ class SearchHandler(BaseHandlers):
         self.labeler = BotLabeler()
         self._register()
 
+    @staticmethod
+    def _main_menu_button() -> tuple[str, dict]:
+        return (
+            ButtonConfig.MAIN_MENU,
+            BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_MAIN_MENU),
+        )
+
     def _register(self) -> None:
         @self.labeler.private_message(text=ButtonConfig.SEARCH)
         async def start_search(message: Message, state_dispenser):
-            await state_dispenser.set(message.peer_id, SearchStates.WAITING)
+            state_peer = await state_dispenser.get(message.peer_id)
+            if state_peer and state_peer.state == SearchStates.WAITING:
+                return
 
             await self.cleanup_current_and_previous(message)
 
-            keyboard = BaseInlineKeyboard()._build_inline_markup([
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-            ])
-            search_msg = await self.send_message(
+            keyboard = BaseInlineKeyboard.build_inline_markup([self._main_menu_button()])
+            search_msg = await self.send_inline_message(
                 message,
                 MessageConfig.INSTRUCTIONS_FOR_SEARCH,
                 keyboard,
@@ -43,12 +49,18 @@ class SearchHandler(BaseHandlers):
             await state_dispenser.set(
                 message.peer_id,
                 SearchStates.WAITING,
-                search_msg_id=search_msg.conversation_message_id,
+                search_msg_id=VkDispatchSupport.sent_message_cmid(search_msg),
             )
 
         @self.labeler.private_message(state=SearchStates.WAITING)
         async def perform_search(message: Message, session: AsyncSession, state_dispenser):
             query = message.text.strip()
+
+            if query in MenuConfig.MAIN_MENU_BUTTONS:
+                await VkDispatchSupport.safe_delete_state(state_dispenser, message.peer_id)
+                if message.conversation_message_id:
+                    await self.safe_delete_message(message, message.conversation_message_id)
+                return
 
             if len(query) < 2:
                 await self.send_message(message, MessageConfig.TWO_SIMBOLS)
@@ -67,12 +79,15 @@ class SearchHandler(BaseHandlers):
                 await self.safe_delete_message(message, search_msg_id)
 
             if not results:
-                keyboard = BaseInlineKeyboard()._build_inline_markup([
-                    (ButtonConfig.BACK_TO_SEARCH, make_payload('back_to_search')),
-                    (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                keyboard = BaseInlineKeyboard.build_inline_markup([
+                    (
+                        ButtonConfig.BACK_TO_SEARCH,
+                        BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_SEARCH),
+                    ),
+                    self._main_menu_button(),
                 ])
-                await state_dispenser.delete(message.peer_id)
-                await self.send_message(message, MessageConfig.FOUND_NOTHING, keyboard)
+                await VkDispatchSupport.safe_delete_state(state_dispenser, message.peer_id)
+                await self.send_inline_message(message, MessageConfig.FOUND_NOTHING, keyboard)
                 return
 
             await state_dispenser.set(
@@ -84,20 +99,23 @@ class SearchHandler(BaseHandlers):
 
             keyboard = SearchCasesListKeyboard(results).get_markup()
             keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.BACK_TO_SEARCH, make_payload('back_to_search')),
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                (
+                    ButtonConfig.BACK_TO_SEARCH,
+                    BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_SEARCH),
+                ),
+                self._main_menu_button(),
             ])
 
-            await self.send_message(
+            await self.send_inline_message(
                 message,
-                f'🔎 Найдено кейсов: {len(results)}\n\nВыберите подходящий:',
+                MessageConfig.SEARCH_FOUND.format(count=len(results)),
                 keyboard,
             )
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('case_search'),
+            VkDispatchSupport.action_rule(CallbackAction.CASE_SEARCH),
         )
         async def view_case_from_search(
             event: MessageEvent,
@@ -115,8 +133,11 @@ class SearchHandler(BaseHandlers):
 
             keyboard = CaseDetailKeyboard(documents, case.id).get_markup()
             keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.BACK_TO_SEARCH_RESULTS, make_payload('back_to_search_results')),
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                (
+                    ButtonConfig.BACK_TO_SEARCH_RESULTS,
+                    BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_SEARCH_RESULTS),
+                ),
+                self._main_menu_button(),
             ])
 
             await state_dispenser.set(
@@ -126,13 +147,13 @@ class SearchHandler(BaseHandlers):
                 search_query=query,
             )
 
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await event.edit_message(text, keyboard=keyboard)
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('back_to_search_results'),
+            VkDispatchSupport.action_rule(CallbackAction.BACK_TO_SEARCH_RESULTS),
         )
         async def back_to_search_results(
             event: MessageEvent,
@@ -156,33 +177,36 @@ class SearchHandler(BaseHandlers):
 
             keyboard = SearchCasesListKeyboard(cases).get_markup()
             keyboard = BaseInlineKeyboard.append_buttons(keyboard, [
-                (ButtonConfig.BACK_TO_SEARCH, make_payload('back_to_search')),
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
+                (
+                    ButtonConfig.BACK_TO_SEARCH,
+                    BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_SEARCH),
+                ),
+                self._main_menu_button(),
             ])
 
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await event.edit_message(
-                f'🔎 Результаты поиска по запросу "{query}":\n\n'
-                f'Найдено кейсов: {len(cases)}\n\nВыберите подходящий:',
+                MessageConfig.SEARCH_RESULTS.format(query=query, count=len(cases)),
                 keyboard=keyboard,
             )
 
         @self.labeler.raw_event(
             GroupEventType.MESSAGE_EVENT,
             MessageEvent,
-            action_rule('back_to_search'),
+            VkDispatchSupport.action_rule(CallbackAction.BACK_TO_SEARCH),
         )
         async def back_to_search(event: MessageEvent, state_dispenser):
-            await state_dispenser.set(event.peer_id, SearchStates.WAITING)
+            keyboard = BaseInlineKeyboard.build_inline_markup([self._main_menu_button()])
 
-            keyboard = BaseInlineKeyboard()._build_inline_markup([
-                (ButtonConfig.MAIN_MENU, make_payload('back_to_main_menu')),
-            ])
-
-            await event.send_empty_answer()
+            await self.safe_answer_event(event)
             await event.edit_message(
                 MessageConfig.INSTRUCTIONS_FOR_SEARCH,
                 keyboard=keyboard,
+            )
+            await state_dispenser.set(
+                event.peer_id,
+                SearchStates.WAITING,
+                search_msg_id=event.conversation_message_id,
             )
 
 
