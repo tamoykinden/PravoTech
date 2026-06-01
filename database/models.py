@@ -1,7 +1,6 @@
 import datetime
 
 from sqlalchemy import BigInteger, Boolean, Computed, DateTime, ForeignKey, String, Text
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -9,10 +8,10 @@ from sqlalchemy.sql import func
 from database.base import Base
 
 
-class User(Base):
-    """Модель пользователя."""
+class TGUser(Base):
+    """Модель пользователя Telegram."""
 
-    __tablename__ = 'users'
+    __tablename__ = 'tg_users'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, comment='ID пользователя в Telegram')
@@ -105,26 +104,31 @@ class Document(Base):
         nullable=False,
         comment='Кейс'
     )
-    file_id: Mapped[str] = mapped_column(
+    tg_file_id: Mapped[str | None] = mapped_column(
         String(500),
-        nullable=False,
-        comment='Telegram file_id документа'
+        nullable=True,
+        comment='Telegram file_id документа',
+    )
+    vk_attachment: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment='VK attachment для быстрой отправки (doc{owner_id}_{id})',
     )
 
     def __repr__(self) -> str:
         return f'Шаблон {self.title}'
 
 
-class UserRequest(Base):
-    """История просмотров кейсов пользователем."""
+class TGUserRequest(Base):
+    """История просмотров кейсов пользователем Telegram."""
 
-    __tablename__ = 'user_requests'
+    __tablename__ = 'tg_user_requests'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey(User.id),
+        ForeignKey(TGUser.id),
         nullable=False,
-        comment='Пользователь'
+        comment='Пользователь Telegram'
     )
     case_id: Mapped[int] = mapped_column(
         ForeignKey(Case.id),
@@ -141,16 +145,16 @@ class UserRequest(Base):
         return f'Запрос пользователя {self.user_id} к кейсу {self.case_id}'
 
 
-class Feedback(Base):
-    """Модель обратной связи от пользователей."""
+class TGFeedback(Base):
+    """Модель обратной связи от пользователей Telegram."""
 
-    __tablename__ = 'feedback'
+    __tablename__ = 'tg_feedback'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey(User.id),
+        ForeignKey(TGUser.id),
         nullable=False,
-        comment='Пользователь'
+        comment='Пользователь Telegram'
     )
     message: Mapped[str] = mapped_column(
         Text,
@@ -165,3 +169,84 @@ class Feedback(Base):
 
     def __repr__(self) -> str:
         return f'Обращение от пользователя {self.user_id}'
+
+
+class VKUser(Base):
+    """Модель пользователя VK."""
+
+    __tablename__ = 'vk_users'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    vk_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, comment='ID пользователя VK')
+    registered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        comment='Дата и время регистрации'
+    )
+    last_activity: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        comment='Последняя активность'
+    )
+    pd_agreed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        comment='Согласие на обработку персональных данных'
+    )
+
+    def __repr__(self) -> str:
+        return f'Пользователь VK {self.id}'
+
+
+class VKUserRequest(Base):
+    """История просмотров кейсов пользователем VK."""
+
+    __tablename__ = 'vk_user_requests'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(VKUser.id),
+        nullable=False,
+        comment='Пользователь VK'
+    )
+    case_id: Mapped[int] = mapped_column(
+        ForeignKey(Case.id),
+        nullable=False,
+        comment='Кейс'
+    )
+    viewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment='Дата и время просмотра'
+    )
+
+    def __repr__(self) -> str:
+        return f'Запрос пользователя VK {self.user_id} к кейсу {self.case_id}'
+
+
+class VKFeedback(Base):
+    """Модель обратной связи от пользователей VK."""
+
+    __tablename__ = 'vk_feedback'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(VKUser.id),
+        nullable=False,
+        comment='Пользователь VK'
+    )
+    message: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment='Текст обращения'
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        comment='Дата и время отправки'
+    )
+
+    def __repr__(self) -> str:
+        return f'Обращение от пользователя VK {self.user_id}'

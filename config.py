@@ -80,9 +80,9 @@ class MessageConfig:
         'Выберите действие из списка ниже:'
     )
     PD_AGREEMENT_TEXT = (
-    'Согласие на обработку персональных данных'
-    'Для использования бота «ПравоТека» нам необходимо ваше согласие '
-    'на обработку персональных данных (telegram_id, username).\n\n'
+        'Согласие на обработку персональных данных\n\n'
+        'Для использования бота «ПравоТека» нам необходимо ваше согласие '
+        'на обработку персональных данных.\n\n'
     'Данные используются только для:\n'
     '• идентификации пользователя\n'
     '• сбора статистики использования\n'
@@ -92,11 +92,28 @@ class MessageConfig:
     'Вы можете отозвать согласие в любой момент, написав нам.'
     )
     PD_DISAGREE_TEXT = (
-    'Доступ ограничен '
-    'К сожалению, мы не можем предоставить вам доступ к боту '
-    'без согласия на обработку персональных данных. '
-    'Если вы передумаете, нажмите кнопку «Войти в бота».'
-)
+        'Доступ ограничен\n'
+        'К сожалению, мы не можем предоставить вам доступ к боту '
+        'без согласия на обработку персональных данных.\n'
+        'Если вы передумаете, нажмите кнопку «Войти в бота».'
+    )
+
+    SELECT_CASE = '📋 Выберите кейс:'
+    SELECT_CATEGORY = '📂 Выберите категорию:'
+    SELECT_CATEGORY_CASES = '📂 Категория: {name}\n\nВыберите кейс:'
+    SEARCH_FOUND = '🔎 Найдено кейсов: {count}\n\nВыберите подходящий:'
+    SEARCH_RESULTS = (
+        '🔎 Результаты поиска по запросу "{query}":\n\n'
+        'Найдено кейсов: {count}\n\nВыберите подходящий:'
+    )
+    DOCUMENT_TITLE = '📄 {title}'
+
+    ADMIN_FEEDBACK_VK = (
+        '📝 Новая обратная связь (VK)!\n\n'
+        '👤 Пользователь: ID {user_id}\n'
+        '💬 Сообщение:\n{text}'
+    )
+
 
 class ButtonConfig:
     """Текст кнопок."""
@@ -114,3 +131,79 @@ class ButtonConfig:
     PD_RETRY_BUTTON = 'Войти в бота'
     PD_AGREE_BUTTON = 'Согласен'
     PD_DISAGREE_BUTTON = 'Не согласен'
+
+
+class CallbackAction:
+    """Идентификаторы action в payload inline-кнопок VK."""
+
+    BACK_TO_MAIN_MENU = 'back_to_main_menu'
+    BACK_TO_SEARCH = 'back_to_search'
+    BACK_TO_SEARCH_RESULTS = 'back_to_search_results'
+    BACK_TO_CASES = 'back_to_cases'
+    BACK_TO_CASES_FROM_CAT = 'back_to_cases_from_cat'
+    BACK_TO_CATEGORIES = 'back_to_categories'
+    CASE_LIST = 'case_list'
+    CASE_CAT = 'case_cat'
+    CASE_SEARCH = 'case_search'
+    CATEGORY = 'cat'
+    DOCUMENT = 'doc'
+    PD_AGREE = 'pd_agree'
+    PD_DISAGREE = 'pd_disagree'
+    PD_RETRY = 'pd_retry'
+
+
+class MenuConfig:
+    """Тексты команд и reply-кнопок главного меню."""
+
+    START_TEXTS = frozenset({
+        '/start',
+        'Начать',
+        'Старт',
+        'начать',
+        'старт',
+    })
+    HELP_TEXTS = frozenset({'/help', 'Помощь', 'помощь'})
+    MAIN_MENU_BUTTONS = frozenset({
+        ButtonConfig.CASES,
+        ButtonConfig.CATEGORIES,
+        ButtonConfig.SEARCH,
+        ButtonConfig.FEEDBACK,
+        *START_TEXTS,
+    })
+
+
+class PdConfig:
+    """Настройки согласия на обработку ПДн."""
+
+    CALLBACK_ACTIONS = frozenset({
+        CallbackAction.PD_AGREE,
+        CallbackAction.PD_DISAGREE,
+        CallbackAction.PD_RETRY,
+    })
+
+
+class VkEnvConfig:
+    """Переменные окружения VK (без секретов в коде)."""
+
+    CHAT_PEER_OFFSET = 2_000_000_000
+
+    @classmethod
+    def get_admin_peer_id(cls) -> int | None:
+        raw_peer = os.getenv('VK_ADMIN_PEER_ID')
+        if raw_peer:
+            return int(raw_peer)
+
+        raw_chat = os.getenv('VK_ADMIN_CHAT_ID')
+        if raw_chat:
+            return cls.CHAT_PEER_OFFSET + int(raw_chat)
+
+        return None
+
+
+class LogConfig:
+    """Сообщения для логов (не показываются пользователю)."""
+
+    VK_ADMIN_PEER_NOT_SET = (
+        'VK_ADMIN_PEER_ID не задан — уведомление об обратной связи не отправлено'
+    )
+    VK_ADMIN_NOTIFY_FAILED = 'Ошибка отправки обратной связи в админ-чат VK'

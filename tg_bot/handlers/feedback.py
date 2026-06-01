@@ -12,7 +12,7 @@ from aiogram.types import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ButtonConfig, MessageConfig
-from database.models import User
+from database.models import TGUser
 from tg_bot.handlers.base import BaseHandlers
 from tg_bot.keyboards.main_menu import MainMenuKeyboard
 from tg_bot.services.feedback import FeedbackService
@@ -52,7 +52,7 @@ class FeedbackHandler(BaseHandlers):
         message: Message,
         state: FSMContext,
         session: AsyncSession,
-        user: User
+        user: TGUser
     ):
         """Сохранить обратную связь и отправить в админ-чат."""
 
@@ -82,11 +82,14 @@ class FeedbackHandler(BaseHandlers):
         if admin_chat_id:
             try:
                 admin_chat_id = int(admin_chat_id)
+                username = message.from_user.username or 'без username'
                 await message.bot.send_message(
                     chat_id=admin_chat_id,
-                    text=f'📝 Новая обратная связь!\n\n'
-                         f'👤 Пользователь: @{message.from_user.username or 'без username'} (ID: {user.id})\n'
-                         f'💬 Сообщение:\n{feedback_text}'
+                    text=(
+                        f'📝 Новая обратная связь!\n\n'
+                        f'👤 Пользователь: @{username} (ID: {user.id})\n'
+                        f'💬 Сообщение:\n{feedback_text}'
+                    ),
                 )
             except Exception as e:
                 print(f'Ошибка отправки в админ-чат: {e}')
