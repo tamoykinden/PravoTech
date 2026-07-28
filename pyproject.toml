@@ -1,5 +1,5 @@
 [project]
-name = "pravoteka"
+name = "PravoTech"
 version = "0.1.0"
 description = "Сервис оперативной юридической поддержки в Telegram и VK"
 requires-python = ">=3.11,<3.14"
