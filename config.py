@@ -5,6 +5,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def required_env(name: str) -> str:
+    """Возвращает обязательную переменную окружения или сообщает об ошибке."""
+
+    value = (os.getenv(name) or '').strip()
+    if not value:
+        raise ValueError(f'{name} не задан в окружении')
+    return value
+
 class BaseConfig:
     """Базовые настройки проекта."""
 
@@ -19,9 +28,7 @@ class DBConfig:
     """Настройки подключения к БД."""
 
     DB_NAME = os.getenv('DB_NAME')
-    DB_USER = os.getenv(
-        'DB_USER',
-    )
+    DB_USER = os.getenv('DB_USER')
     DB_PASSWORD = os.getenv('DB_PASSWORD')
     DB_HOST = os.getenv('DB_HOST')
     DB_PORT = os.getenv('DB_PORT')
@@ -31,6 +38,23 @@ class DBConfig:
         """Возвращает строку подключения к PostgreSQL."""
 
         return f'postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
+
+
+class BackendConfig:
+    """Безопасные настройки центрального API и его клиентов."""
+
+    URL = (os.getenv('BACKEND_URL') or 'http://127.0.0.1:8000').rstrip('/')
+    ENVIRONMENT = os.getenv('ENVIRONMENT', 'development').strip().lower()
+
+    @classmethod
+    def client_api_key(cls, platform: str) -> str:
+        """Возвращает отдельный API-ключ заданной платформы."""
+
+        names = {'telegram': 'TG_BACKEND_API_KEY', 'vk': 'VK_BACKEND_API_KEY'}
+        try:
+            return required_env(names[platform])
+        except KeyError as error:
+            raise ValueError(f'Неизвестная платформа: {platform}') from error
 
 
 class MessageConfig:
@@ -65,7 +89,7 @@ class MessageConfig:
     THANKS_FOR_FEEDBACK = 'Спасибо за обратную связь! Мы обязательно рассмотрим ваше сообщение.'
     INSTRUCTIONS_FOR_SEARCH = (
         'Введите ключевые слова для поиска (через пробел):'
-        'Например: <i>шум соседи</i> или <i>возврат товара</i>'
+        'Например: товар или возврат товара'
     )
     SEARCH_CANCELED = 'Поиск отменен.'
     TWO_SIMBOLS = 'Введите минимум 2 символа для поиска.'
@@ -118,24 +142,26 @@ class MessageConfig:
 class ButtonConfig:
     """Текст кнопок."""
 
-    BACK = 'Назад'
-    CASES = 'Список кейсов'
-    CATEGORIES = 'Категории'
-    FEEDBACK = 'Обратная связь'
-    SEARCH = 'Поиск кейса'
-    BACK_TO_CASES = 'Назад к кейсам'
-    BACK_TO_CATEGORIES = 'Назад к категориям'
-    BACK_TO_SEARCH = 'Назад к поиску'
-    MAIN_MENU = 'Главное меню'
-    BACK_TO_SEARCH_RESULTS = 'Назад к результатам поиска'
-    PD_RETRY_BUTTON = 'Войти в бота'
-    PD_AGREE_BUTTON = 'Согласен'
-    PD_DISAGREE_BUTTON = 'Не согласен'
+    BACK = '🔙 Назад'
+    CASES = '📋 Список кейсов'
+    CATEGORIES = '📂 Категории'
+    FEEDBACK = '💬 Обратная связь'
+    SEARCH = '🔎 Поиск кейса'
+    BACK_TO_CASE = '🔙 Назад к кейсу'
+    BACK_TO_CASES = '🔙 Назад к кейсам'
+    BACK_TO_CATEGORIES = '🔙 Назад к категориям'
+    BACK_TO_SEARCH = '🔙 Назад к поиску'
+    MAIN_MENU = '🏠 Главное меню'
+    BACK_TO_SEARCH_RESULTS = '🔙 Назад к результатам поиска'
+    PD_RETRY_BUTTON = '🔐 Войти в бота'
+    PD_AGREE_BUTTON = '✅ Согласен'
+    PD_DISAGREE_BUTTON = '❌ Не согласен'
 
 
 class CallbackAction:
     """Идентификаторы action в payload inline-кнопок VK."""
 
+    BACK_TO_CASE = 'back_to_case'
     BACK_TO_MAIN_MENU = 'back_to_main_menu'
     BACK_TO_SEARCH = 'back_to_search'
     BACK_TO_SEARCH_RESULTS = 'back_to_search_results'
@@ -157,10 +183,17 @@ class MenuConfig:
 
     START_TEXTS = frozenset({
         '/start',
-        'Начать',
-        'Старт',
-        'начать',
-        'старт',
+        'Начать', 'Старт',
+        'начать', 'старт',
+        'Привет', 'привет',
+        'Хай', 'хай',
+        'Салют', 'салют',
+        'Здравствуйте', 'здравствуйте',
+        'Здравствуй', 'здравствуй',
+        'Добрый день', 'добрый день',
+        'Доброе утро', 'доброе утро',
+        'Добрый вечер', 'добрый вечер',
+        'Доброй ночи', 'доброй ночи',
     })
     HELP_TEXTS = frozenset({'/help', 'Помощь', 'помощь'})
     MAIN_MENU_BUTTONS = frozenset({
