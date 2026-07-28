@@ -23,5 +23,6 @@ logs/
 htmlcov/
 .pytest_cache/
 
-alembic/versions/*.py
-!alembic/versions/.gitkeep
+postgres-data/
+caddy-data/
+caddy-config/
