@@ -48,7 +48,8 @@ class Logger:
         logger.add(
             sys.stdout,
             format='{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} - {message}',
-            level='INFO'
+            level='INFO',
+            diagnose=False,
         )
 
         logger.add(
@@ -56,7 +57,8 @@ class Logger:
             rotation='1 day',
             retention='30 days',
             format='{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name} - {message}',
-            level='INFO'
+            level='INFO',
+            diagnose=False,
         )
 
     def get_logger(self) -> Any:

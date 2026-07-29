@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Админка — ПравоТека</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f5f7fb; color: #172033; }
+    header { display: flex; justify-content: space-between; padding: 18px 5vw; background: #172033; color: white; }
+    main { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+    section { background: white; padding: 24px; margin: 18px 0; border-radius: 14px; box-shadow: 0 4px 20px #17203312; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .stat { background: #eaf0ff; padding: 18px; border-radius: 10px; }
+    input, textarea, select, button { box-sizing: border-box; padding: 10px; border: 1px solid #ccd3df; border-radius: 7px; }
+    input, textarea, select { width: 100%; margin: 5px 0 12px; }
+    textarea { min-height: 150px; }
+    button { background: #2957d3; color: white; border: 0; cursor: pointer; }
+    .danger { background: #b42318; }
+    li { margin: 9px 0; }
+    .inline { display: inline; }
+    @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header><strong>ПравоТека · админка</strong>
+  <form method="post" action="/admin/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit">Выйти</button>
+  </form>
+</header>
+<main>
+  {% if request.query_params.get('sync') == 'ok' %}
+  <section><strong>Синхронизация завершена.</strong>
+    Кейсов создано: {{ request.query_params.get('cases_created', '0') }},
+    обновлено: {{ request.query_params.get('cases_updated', '0') }},
+    документов создано: {{ request.query_params.get('documents_created', '0') }}.
+  </section>
+  {% endif %}
+  <section><h2>Яндекс.Диск</h2>
+    <p>Обновляет описания кейсов и добавляет новые шаблоны без удаления данных.</p>
+    <form method="post" action="/admin/sync-yandex-disk">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Синхронизировать сейчас</button>
+    </form>
+  </section>
+  <div class="stats">
+    <div class="stat"><strong>{{ counts.tg_users }}</strong><br>Telegram-пользователей</div>
+    <div class="stat"><strong>{{ counts.vk_users }}</strong><br>VK-пользователей</div>
+    <div class="stat"><strong>{{ counts.feedback }}</strong><br>Обращений</div>
+  </div>
+  <section><h2>Новая категория</h2>
+    <form method="post" action="/admin/categories">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Название</label><input name="name" minlength="2" maxlength="100" required>
+      <button type="submit">Добавить</button>
+    </form>
+    <ul>{% for item in categories %}<li>{{ item.name }}</li>{% else %}<li>Категорий пока нет</li>{% endfor %}</ul>
+  </section>
+  <section><h2>Новый кейс</h2>
+    <form method="post" action="/admin/cases">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Название</label><input name="title" minlength="2" maxlength="100" required>
+      <label>Категория</label><select name="category_id" required>
+        {% for item in categories %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+      </select>
+      <label>Пошаговое решение</label><textarea name="solution" minlength="10" maxlength="20000" required></textarea>
+      <button type="submit">Добавить</button>
+    </form>
+  </section>
+  <section><h2>Кейсы</h2><ul>
+    {% for item in cases %}<li><strong>{{ item.title }}</strong>
+      <form class="inline" method="post" action="/admin/cases/{{ item.id }}/delete" onsubmit="return confirm('Удалить кейс?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="danger" type="submit">Удалить</button>
+      </form></li>
+    {% else %}<li>Кейсов пока нет</li>{% endfor %}
+  </ul></section>
+  <section><h2>Документы</h2><ul>
+    {% for item in documents %}<li>{{ item.title }} (кейс №{{ item.case_id }})</li>{% else %}<li>Документов пока нет</li>{% endfor %}
+  </ul></section>
+</main></body>
+</html>
