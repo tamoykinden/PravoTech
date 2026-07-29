@@ -3,16 +3,12 @@ import os
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message)
 
+from backend.schemas import UserRead
+from bot_client import BackendClient
 from config import ButtonConfig, MessageConfig
-from database.models import TGUser
 from tg_bot.handlers.base import BaseHandlers
 from tg_bot.keyboards.main_menu import MainMenuKeyboard
 from tg_bot.services.feedback import FeedbackService
@@ -51,8 +47,8 @@ class FeedbackHandler(BaseHandlers):
         self,
         message: Message,
         state: FSMContext,
-        session: AsyncSession,
-        user: TGUser
+        session: BackendClient,
+        user: UserRead,
     ):
         """Сохранить обратную связь и отправить в админ-чат."""
 

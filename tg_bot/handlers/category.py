@@ -1,15 +1,12 @@
 from aiogram import F, Router
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message)
 
+from bot_client import BackendClient
 from config import ButtonConfig, MessageConfig
 from tg_bot.handlers.base import BaseHandlers
-from tg_bot.keyboards.category import CasesByCategoryKeyboard, CategoriesKeyboard
+from tg_bot.keyboards.category import (CasesByCategoryKeyboard,
+                                       CategoriesKeyboard)
 from tg_bot.keyboards.main_menu import MainMenuKeyboard
 from tg_bot.services.case import CaseService
 from tg_bot.services.category import CategoryService
@@ -25,7 +22,7 @@ class CategoriesHandler(BaseHandlers):
         self.router.callback_query(F.data == 'back_to_categories')(self.back_to_categories)
         self.router.callback_query(F.data == 'back_to_main_menu')(self.back_to_main_menu)
 
-    async def show_categories(self, message: Message, session: AsyncSession):
+    async def show_categories(self, message: Message, session: BackendClient):
         """Показать все категории."""
 
         service = CategoryService(session)
@@ -47,7 +44,7 @@ class CategoriesHandler(BaseHandlers):
 
         await message.answer('📂 Выберите категорию:', reply_markup=keyboard)
 
-    async def show_cases_by_category(self, callback: CallbackQuery, session: AsyncSession):
+    async def show_cases_by_category(self, callback: CallbackQuery, session: BackendClient):
         """Показать кейсы из выбранной категории."""
 
         category_id = int(callback.data.split('_')[1])
@@ -79,7 +76,7 @@ class CategoriesHandler(BaseHandlers):
         )
         await callback.answer()
 
-    async def back_to_categories(self, callback: CallbackQuery, session: AsyncSession):
+    async def back_to_categories(self, callback: CallbackQuery, session: BackendClient):
         """Вернуться к списку категорий."""
 
         service = CategoryService(session)

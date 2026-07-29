@@ -1,11 +1,12 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 
+from bot_client import BackendClient
 from config import ButtonConfig, CallbackAction, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
 from vk_bot.keyboards.base import BaseInlineKeyboard
-from vk_bot.keyboards.category import CasesByCategoryKeyboard, CategoriesKeyboard
+from vk_bot.keyboards.category import (CasesByCategoryKeyboard,
+                                       CategoriesKeyboard)
 from vk_bot.services.case import CaseService
 from vk_bot.services.category import CategoryService
 from vk_bot.support.dispatch import VkDispatchSupport
@@ -27,7 +28,7 @@ class CategoriesHandler(BaseHandlers):
 
     def _register(self) -> None:
         @self.labeler.private_message(text=ButtonConfig.CATEGORIES)
-        async def show_categories(message: Message, session: AsyncSession):
+        async def show_categories(message: Message, session: BackendClient):
             service = CategoryService(session)
             categories = await service.get_all_categories()
 
@@ -50,7 +51,7 @@ class CategoriesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.CATEGORY),
         )
-        async def show_cases_by_category(event: MessageEvent, session: AsyncSession):
+        async def show_cases_by_category(event: MessageEvent, session: BackendClient):
             category_id = event.payload['id']
             await self._show_category_cases(
                 event,
@@ -66,7 +67,7 @@ class CategoriesHandler(BaseHandlers):
         )
         async def paginate_category_cases(
             event: MessageEvent,
-            session: AsyncSession,
+            session: BackendClient,
         ):
             await self._show_category_cases(
                 event,
@@ -80,7 +81,7 @@ class CategoriesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.BACK_TO_CATEGORIES),
         )
-        async def back_to_categories(event: MessageEvent, session: AsyncSession):
+        async def back_to_categories(event: MessageEvent, session: BackendClient):
             service = CategoryService(session)
             categories = await service.get_all_categories()
 
@@ -93,7 +94,7 @@ class CategoriesHandler(BaseHandlers):
     async def _show_category_cases(
         self,
         event: MessageEvent,
-        session: AsyncSession,
+        session: BackendClient,
         category_id: int,
         page: int,
     ) -> None:

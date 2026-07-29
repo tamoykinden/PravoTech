@@ -1,7 +1,7 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot_client import BackendClient
 from config import ButtonConfig, MessageConfig
 from tg_bot.handlers.base import BaseHandlers
 from tg_bot.keyboards.case import CaseDetailKeyboard, CasesListKeyboard
@@ -21,7 +21,7 @@ class CasesHandler(BaseHandlers):
         self.router.callback_query(F.data.startswith('back_to_cases_from_cat_'))(self.back_to_cases_by_category)
         self.router.callback_query(F.data == 'back_to_main_menu')(self.back_to_main_menu)
 
-    async def list_cases(self, message: Message, session: AsyncSession):
+    async def list_cases(self, message: Message, session: BackendClient):
         """Показать список всех кейсов (из главного меню)."""
 
         service = CaseService(session)
@@ -43,7 +43,7 @@ class CasesHandler(BaseHandlers):
 
         await message.answer('📋 Выберите кейс:', reply_markup=keyboard)
 
-    async def view_case_from_list(self, callback: CallbackQuery, session: AsyncSession):
+    async def view_case_from_list(self, callback: CallbackQuery, session: BackendClient):
         """Показать кейс из общего списка."""
 
         case_id = int(callback.data.split('_')[2])
@@ -67,7 +67,7 @@ class CasesHandler(BaseHandlers):
         await callback.message.edit_text(text, reply_markup=keyboard)
         await callback.answer()
 
-    async def view_case_from_category(self, callback: CallbackQuery, session: AsyncSession):
+    async def view_case_from_category(self, callback: CallbackQuery, session: BackendClient):
         """Показать кейс из категории."""
 
         parts = callback.data.split('_')
@@ -96,7 +96,7 @@ class CasesHandler(BaseHandlers):
         await callback.message.edit_text(text, reply_markup=keyboard)
         await callback.answer()
 
-    async def back_to_cases_list(self, callback: CallbackQuery, session: AsyncSession):
+    async def back_to_cases_list(self, callback: CallbackQuery, session: BackendClient):
         """Вернуться к списку всех кейсов."""
 
         service = CaseService(session)
@@ -111,7 +111,7 @@ class CasesHandler(BaseHandlers):
         await callback.message.answer('📋 Выберите кейс:', reply_markup=keyboard)
         await callback.answer()
 
-    async def back_to_cases_by_category(self, callback: CallbackQuery, session: AsyncSession):
+    async def back_to_cases_by_category(self, callback: CallbackQuery, session: BackendClient):
         """Вернуться к списку кейсов по категории."""
 
         category_id = int(callback.data.split('_')[-1])

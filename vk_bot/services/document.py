@@ -1,22 +1,22 @@
-import os
 import tempfile
 from pathlib import Path
 
-import aiohttp
 from vkbottle import ABCAPI
 
 from backend.schemas import DocumentRead
+from bot_client import BackendClient
 from config import MessageConfig
 from vk_bot.services.base import BaseService
+from vk_bot.services.document_uploader import VKMessageDocumentUploader
 from vk_bot.support.dispatch import VkDispatchSupport
 
 
 class DocumentService(BaseService):
     """Сервис для работы с документами в VK."""
 
-    def __init__(self, session):
+    def __init__(self, session: BackendClient):
         super().__init__(session)
-        self.crud = self
+        self._uploader = VKMessageDocumentUploader()
 
     async def get_vk_documents(self, case_id: int) -> list[DocumentRead]:
         return (await self.session.get_case(case_id)).documents
@@ -40,9 +40,9 @@ class DocumentService(BaseService):
 
         try:
             tmp_path.write_bytes(await self.session.download_document(document.id))
-            attachment = await self._upload_for_message(
+            attachment = await self._uploader.upload(
                 api,
-                str(tmp_path),
+                tmp_path,
                 peer_id,
                 document.title,
             )
@@ -55,43 +55,3 @@ class DocumentService(BaseService):
             attachment=attachment,
             random_id=VkDispatchSupport.random_id(),
         )
-
-    async def _upload_for_message(self, api: ABCAPI, file_path: str, peer_id: int, title: str) -> str:
-        """Загружает файл через docs.getMessagesUploadServer с повторами."""
-        token = api.token_generator.token if hasattr(api.token_generator, 'token') else api.token_generator.generate()
-
-        async with aiohttp.ClientSession() as http:
-            for attempt in range(3):
-                try:
-                    async with http.get('https://api.vk.com/method/docs.getMessagesUploadServer', params={
-                        'access_token': token, 'v': '5.199', 'type': 'doc', 'peer_id': peer_id,
-                    }) as resp:
-                        data = await resp.json()
-                        if 'error' in data:
-                            raise RuntimeError(f"getMessagesUploadServer error: {data['error']}")
-                        upload_url = data['response']['upload_url']
-
-                    with open(file_path, 'rb') as f:
-                        form = aiohttp.FormData()
-                        form.add_field('file', f, filename=os.path.basename(file_path))
-                        async with http.post(upload_url, data=form) as resp:
-                            text = await resp.text()
-                            import json
-                            upload_result = json.loads(text)
-
-                    async with http.get('https://api.vk.com/method/docs.save', params={
-                        'access_token': token, 'v': '5.199',
-                        'file': upload_result['file'], 'title': title,
-                    }) as resp:
-                        save_result = await resp.json()
-                        if 'error' in save_result:
-                            raise RuntimeError(f"docs.save error: {save_result['error']}")
-                        doc = save_result['response']['doc']
-                        return f"doc{doc['owner_id']}_{doc['id']}"
-
-                except Exception as e:
-                    if attempt < 2:
-                        import asyncio
-                        await asyncio.sleep(2)
-                    else:
-                        raise

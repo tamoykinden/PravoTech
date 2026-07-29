@@ -1,15 +1,12 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 
+from backend.schemas import UserRead
+from bot_client import BackendClient
 from config import CallbackAction, MenuConfig, MessageConfig
-from database.models import VKUser
 from vk_bot.handlers.base import BaseHandlers
-from vk_bot.keyboards.main_menu import (
-    MainMenuKeyboard,
-    PDAgreementKeyboard,
-    PDRetryKeyboard,
-)
+from vk_bot.keyboards.main_menu import (MainMenuKeyboard, PDAgreementKeyboard,
+                                        PDRetryKeyboard)
 from vk_bot.support.dispatch import VkDispatchSupport
 
 
@@ -24,8 +21,8 @@ class CommonHandler(BaseHandlers):
         @self.labeler.private_message(text=list(MenuConfig.START_TEXTS))
         async def cmd_start(
             message: Message,
-            user: VKUser,
-            session: AsyncSession,
+            user: UserRead,
+            session: BackendClient,
             state_dispenser,
         ):
             await VkDispatchSupport.safe_delete_state(state_dispenser, message.peer_id)
@@ -55,8 +52,8 @@ class CommonHandler(BaseHandlers):
         )
         async def pd_agree(
             event: MessageEvent,
-            user: VKUser,
-            session: AsyncSession,
+            user: UserRead,
+            session: BackendClient,
         ):
             user = await session.update_consent(user.id, True)
             await self.safe_answer_event(event)

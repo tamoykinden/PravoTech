@@ -1,7 +1,7 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 
+from bot_client import BackendClient
 from config import ButtonConfig, CallbackAction, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
 from vk_bot.keyboards.base import BaseInlineKeyboard
@@ -26,7 +26,7 @@ class CasesHandler(BaseHandlers):
 
     def _register(self) -> None:
         @self.labeler.private_message(text=ButtonConfig.CASES)
-        async def list_cases(message: Message, session: AsyncSession):
+        async def list_cases(message: Message, session: BackendClient):
             service = CaseService(session)
             cases = await service.get_all_cases()
 
@@ -45,7 +45,7 @@ class CasesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.CASE_LIST),
         )
-        async def view_case_from_list(event: MessageEvent, session: AsyncSession):
+        async def view_case_from_list(event: MessageEvent, session: BackendClient):
             case_id = event.payload['id']
             await self._show_case(
                 event,
@@ -68,7 +68,7 @@ class CasesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule('case_page'),
         )
-        async def paginate_cases(event: MessageEvent, session: AsyncSession):
+        async def paginate_cases(event: MessageEvent, session: BackendClient):
             page = event.payload['page']
             service = CaseService(session)
             cases = await service.get_all_cases()
@@ -84,7 +84,7 @@ class CasesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.CASE_CAT),
         )
-        async def view_case_from_category(event: MessageEvent, session: AsyncSession):
+        async def view_case_from_category(event: MessageEvent, session: BackendClient):
             case_id = event.payload['id']
             category_id = event.payload['category_id']
             await self._show_case(
@@ -115,7 +115,7 @@ class CasesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.BACK_TO_CASES),
         )
-        async def back_to_cases_list(event: MessageEvent, session: AsyncSession):
+        async def back_to_cases_list(event: MessageEvent, session: BackendClient):
             await self._show_cases_list(event, session, page=0)
 
         @self.labeler.raw_event(
@@ -123,7 +123,7 @@ class CasesHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.BACK_TO_CASES_FROM_CAT),
         )
-        async def back_to_cases_by_category(event: MessageEvent, session: AsyncSession):
+        async def back_to_cases_by_category(event: MessageEvent, session: BackendClient):
             category_id = event.payload['category_id']
             service = CaseService(session)
             cases = await service.get_cases_by_category(category_id)
@@ -140,7 +140,7 @@ class CasesHandler(BaseHandlers):
     async def _show_case(
         self,
         event: MessageEvent,
-        session: AsyncSession,
+        session: BackendClient,
         case_id: int,
         origin: str,
         back_buttons: list,
@@ -159,7 +159,12 @@ class CasesHandler(BaseHandlers):
         await self.safe_answer_event(event)
         await event.edit_message(text, keyboard=keyboard)
 
-    async def _show_cases_list(self, event: MessageEvent, session: AsyncSession, page: int = 0) -> None:
+    async def _show_cases_list(
+        self,
+        event: MessageEvent,
+        session: BackendClient,
+        page: int = 0,
+    ) -> None:
         service = CaseService(session)
         cases = await service.get_all_cases()
 

@@ -1,15 +1,12 @@
 from aiogram import F, Router, types
 from aiogram.filters import Command
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.schemas import UserRead
+from bot_client import BackendClient
 from config import MenuConfig, MessageConfig
-from database.models import TGUser
 from tg_bot.handlers.base import BaseHandlers
-from tg_bot.keyboards.main_menu import (
-    MainMenuKeyboard,
-    PDAgreementKeyboard,
-    PDRetryKeyboard,
-)
+from tg_bot.keyboards.main_menu import (MainMenuKeyboard, PDAgreementKeyboard,
+                                        PDRetryKeyboard)
 
 
 class CommonHandler(BaseHandlers):
@@ -25,7 +22,7 @@ class CommonHandler(BaseHandlers):
         self.router.callback_query(F.data == 'pd_disagree')(self.pd_disagree)
         self.router.callback_query(F.data == 'pd_retry')(self.pd_retry)
 
-    async def cmd_start(self, message: types.Message, user: TGUser, session: AsyncSession):
+    async def cmd_start(self, message: types.Message, user: UserRead, session: BackendClient):
         """Обработчик команды /start."""
 
         if not user.pd_agreed:
@@ -40,7 +37,7 @@ class CommonHandler(BaseHandlers):
             reply_markup=MainMenuKeyboard().get_markup()
         )
 
-    async def cmd_start_text(self, message: types.Message, user: TGUser, session: AsyncSession):
+    async def cmd_start_text(self, message: types.Message, user: UserRead, session: BackendClient):
         """Обработчик текстовых приветствий (Привет, Хай и т.д.)."""
 
         await self.cmd_start(message, user, session)
@@ -50,7 +47,7 @@ class CommonHandler(BaseHandlers):
 
         await message.answer(MessageConfig.HELP)
 
-    async def pd_agree(self, callback: types.CallbackQuery, user: TGUser, session: AsyncSession):
+    async def pd_agree(self, callback: types.CallbackQuery, user: UserRead, session: BackendClient):
         """Пользователь согласился на обработку ПДн."""
 
         user = await session.update_consent(user.id, True)

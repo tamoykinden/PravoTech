@@ -1,7 +1,7 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import BaseStateGroup, GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
 
+from bot_client import BackendClient
 from config import ButtonConfig, CallbackAction, MenuConfig, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
 from vk_bot.keyboards.base import BaseInlineKeyboard
@@ -53,7 +53,7 @@ class SearchHandler(BaseHandlers):
             )
 
         @self.labeler.private_message(state=SearchStates.WAITING)
-        async def perform_search(message: Message, session: AsyncSession, state_dispenser):
+        async def perform_search(message: Message, session: BackendClient, state_dispenser):
             query = message.text.strip()
 
             if query in MenuConfig.MAIN_MENU_BUTTONS:
@@ -112,7 +112,7 @@ class SearchHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule('search_page'),
         )
-        async def paginate_search(event: MessageEvent, session: AsyncSession, state_dispenser):
+        async def paginate_search(event: MessageEvent, session: BackendClient, state_dispenser):
             page = event.payload['page']
             state_peer = await state_dispenser.get(event.peer_id)
             case_ids = state_peer.payload.get('search_results', []) if state_peer else []
@@ -144,7 +144,7 @@ class SearchHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.CASE_SEARCH),
         )
-        async def view_case_from_search(event: MessageEvent, session: AsyncSession, state_dispenser):
+        async def view_case_from_search(event: MessageEvent, session: BackendClient, state_dispenser):
             case_id = event.payload['id']
             state_peer = await state_dispenser.get(event.peer_id)
             case_ids = state_peer.payload.get('search_results', []) if state_peer else []
@@ -181,7 +181,7 @@ class SearchHandler(BaseHandlers):
             MessageEvent,
             VkDispatchSupport.action_rule(CallbackAction.BACK_TO_SEARCH_RESULTS),
         )
-        async def back_to_search_results(event: MessageEvent, session: AsyncSession, state_dispenser):
+        async def back_to_search_results(event: MessageEvent, session: BackendClient, state_dispenser):
             state_peer = await state_dispenser.get(event.peer_id)
             case_ids = state_peer.payload.get('search_results', []) if state_peer else []
             query = state_peer.payload.get('search_query', '') if state_peer else ''
@@ -226,7 +226,7 @@ class SearchHandler(BaseHandlers):
 
     @staticmethod
     async def _get_cases_by_ids(
-        session: AsyncSession,
+        session: BackendClient,
         case_ids: list[int],
     ) -> list:
         """Восстанавливает сохранённую выдачу через центральный backend."""

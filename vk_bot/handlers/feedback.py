@@ -1,9 +1,9 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import BaseStateGroup
 from vkbottle.bot import BotLabeler, Message
 
+from backend.schemas import UserRead
+from bot_client import BackendClient
 from config import ButtonConfig, CallbackAction, MenuConfig, MessageConfig
-from database.models import VKUser
 from vk_bot.handlers.base import BaseHandlers
 from vk_bot.keyboards.base import BaseInlineKeyboard
 from vk_bot.keyboards.main_menu import MainMenuKeyboard
@@ -53,8 +53,8 @@ class FeedbackHandler(BaseHandlers):
         @self.labeler.private_message(state=FeedbackStates.WAITING)
         async def save_feedback(
             message: Message,
-            session: AsyncSession,
-            user: VKUser,
+            session: BackendClient,
+            user: UserRead,
             state_dispenser,
             bot,
         ):

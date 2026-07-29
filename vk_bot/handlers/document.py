@@ -8,6 +8,7 @@ from vk_bot.handlers.base import BaseHandlers
 from vk_bot.keyboards.base import BaseInlineKeyboard
 from vk_bot.keyboards.case import CaseDetailKeyboard
 from vk_bot.services.document import DocumentService
+from vk_bot.services.document_uploader import VKDocumentUploadError
 from vk_bot.support.dispatch import VkDispatchSupport
 
 
@@ -31,7 +32,7 @@ class DocumentHandler(BaseHandlers):
             doc_id = event.payload['id']
 
             service = DocumentService(session)
-            document = await service.crud.get_by_id(doc_id)
+            document = await service.get_by_id(doc_id)
 
             if not document:
                 await event.show_snackbar(MessageConfig.NO_FIND_FILE)
@@ -41,7 +42,7 @@ class DocumentHandler(BaseHandlers):
 
             try:
                 await service.send_document(event.ctx_api, event.peer_id, document)
-            except (BackendError, ValueError):
+            except (BackendError, ValueError, VKDocumentUploadError):
                 bot_logger.exception('Не удалось получить документ через backend')
                 await event.show_snackbar(MessageConfig.NO_FIND_FILE)
                 return

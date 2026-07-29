@@ -1,14 +1,10 @@
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
+from aiogram.types import (CallbackQuery, InlineKeyboardButton,
+                           InlineKeyboardMarkup, Message)
 
+from bot_client import BackendClient
 from config import ButtonConfig, MessageConfig
 from tg_bot.handlers.base import BaseHandlers
 from tg_bot.keyboards.case import CaseDetailKeyboard
@@ -50,7 +46,7 @@ class SearchHandler(BaseHandlers):
 
         await state.update_data(search_msg_id=search_msg.message_id)
 
-    async def perform_search(self, message: Message, state: FSMContext, session: AsyncSession):
+    async def perform_search(self, message: Message, state: FSMContext, session: BackendClient):
         """Выполнить поиск по запросу."""
 
         query = message.text.strip()
@@ -100,7 +96,7 @@ class SearchHandler(BaseHandlers):
             reply_markup=keyboard
         )
 
-    async def view_case_from_search(self, callback: CallbackQuery, session: AsyncSession, state: FSMContext):
+    async def view_case_from_search(self, callback: CallbackQuery, session: BackendClient, state: FSMContext):
         """Показать кейс из результатов поиска."""
 
         case_id = int(callback.data.split('_')[2])
@@ -130,7 +126,7 @@ class SearchHandler(BaseHandlers):
         await callback.message.edit_text(text, reply_markup=keyboard)
         await callback.answer()
 
-    async def back_to_search_results(self, callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    async def back_to_search_results(self, callback: CallbackQuery, state: FSMContext, session: BackendClient):
         """Вернуться к результатам поиска."""
 
         data = await state.get_data()
