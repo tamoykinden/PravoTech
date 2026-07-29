@@ -1,6 +1,6 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ButtonConfig, CallbackAction, MessageConfig
 from vk_bot.handlers.base import BaseHandlers
@@ -52,31 +52,27 @@ class CategoriesHandler(BaseHandlers):
         )
         async def show_cases_by_category(event: MessageEvent, session: AsyncSession):
             category_id = event.payload['id']
+            await self._show_category_cases(
+                event,
+                session,
+                category_id,
+                page=0,
+            )
 
-            category_service = CategoryService(session)
-            category = await category_service.get_category_by_id(category_id)
-            case_service = CaseService(session)
-            cases = await case_service.get_cases_by_category(category_id)
-
-            if not cases:
-                keyboard = BaseInlineKeyboard.build_inline_markup([
-                    (
-                        ButtonConfig.BACK_TO_CATEGORIES,
-                        BaseInlineKeyboard.make_payload(CallbackAction.BACK_TO_CATEGORIES),
-                    ),
-                    self._main_menu_button(),
-                ])
-                await self.safe_answer_event(event)
-                await event.edit_message(MessageConfig.NO_CASES_IN_CAT, keyboard=keyboard)
-                return
-
-            keyboard = CasesByCategoryKeyboard(cases, category_id).get_markup()
-            keyboard = BaseInlineKeyboard.append_buttons(keyboard, [self._main_menu_button()])
-
-            await self.safe_answer_event(event)
-            await event.edit_message(
-                MessageConfig.SELECT_CATEGORY_CASES.format(name=category.name),
-                keyboard=keyboard,
+        @self.labeler.raw_event(
+            GroupEventType.MESSAGE_EVENT,
+            MessageEvent,
+            VkDispatchSupport.action_rule('category_case_page'),
+        )
+        async def paginate_category_cases(
+            event: MessageEvent,
+            session: AsyncSession,
+        ):
+            await self._show_category_cases(
+                event,
+                session,
+                category_id=event.payload['category_id'],
+                page=event.payload['page'],
             )
 
         @self.labeler.raw_event(
@@ -93,6 +89,63 @@ class CategoriesHandler(BaseHandlers):
 
             await self.safe_answer_event(event)
             await event.edit_message(MessageConfig.SELECT_CATEGORY, keyboard=keyboard)
+
+    async def _show_category_cases(
+        self,
+        event: MessageEvent,
+        session: AsyncSession,
+        category_id: int,
+        page: int,
+    ) -> None:
+        """Показывает одну допустимую VK страницу кейсов категории."""
+
+        category_service = CategoryService(session)
+        category = await category_service.get_category_by_id(category_id)
+        case_service = CaseService(session)
+        cases = await case_service.get_cases_by_category(category_id)
+
+        if not cases:
+            keyboard = BaseInlineKeyboard.build_inline_markup([
+                (
+                    ButtonConfig.BACK_TO_CATEGORIES,
+                    BaseInlineKeyboard.make_payload(
+                        CallbackAction.BACK_TO_CATEGORIES
+                    ),
+                ),
+                self._main_menu_button(),
+            ])
+            await self.safe_answer_event(event)
+            await event.edit_message(
+                MessageConfig.NO_CASES_IN_CAT,
+                keyboard=keyboard,
+            )
+            return
+
+        keyboard = CasesByCategoryKeyboard(
+            cases,
+            category_id,
+            page=page,
+        ).get_markup()
+        keyboard = BaseInlineKeyboard.append_buttons(
+            keyboard,
+            [
+                (
+                    ButtonConfig.BACK_TO_CATEGORIES,
+                    BaseInlineKeyboard.make_payload(
+                        CallbackAction.BACK_TO_CATEGORIES
+                    ),
+                ),
+                self._main_menu_button(),
+            ],
+        )
+
+        await self.safe_answer_event(event)
+        await event.edit_message(
+            MessageConfig.SELECT_CATEGORY_CASES.format(
+                name=category.name
+            ),
+            keyboard=keyboard,
+        )
 
 
 categories_handler = CategoriesHandler()

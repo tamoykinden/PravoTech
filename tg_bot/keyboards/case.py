@@ -33,10 +33,17 @@ class CasesListKeyboard(BaseInlineKeyboard):
 class CaseDetailKeyboard(BaseInlineKeyboard):
     """Инлайн-клавиатура для деталей кейса (документы)."""
 
-    def __init__(self, documents: List[Document], case_id: int, row_width: int = 2):
+    def __init__(
+        self,
+        documents: List[Document],
+        case_id: int,
+        origin: str = 'all',
+        row_width: int = 2,
+    ):
         super().__init__(row_width=row_width)
         self.documents = documents
         self.case_id = case_id
+        self.origin = origin
 
     def get_markup(self):
         """Возвращает готовую Inline-клавиатуру с документами."""
@@ -47,7 +54,9 @@ class CaseDetailKeyboard(BaseInlineKeyboard):
             buttons.append(
                 InlineKeyboardButton(
                     text=doc.title,
-                    callback_data=f'doc_{doc.id}'
+                    callback_data=(
+                        f'doc_{doc.id}_{self.case_id}_{self.origin}'
+                    )
                 )
             )
         return self._build_inline_markup(buttons)

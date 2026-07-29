@@ -4,8 +4,7 @@ import os
 from dotenv import load_dotenv
 from vkbottle import Bot
 
-from config import DBConfig
-from database.base import init_connection
+from bot_client import BackendClient
 from logger import bot_logger
 from vk_bot.middleware.user import BotMiddleware, UserMiddleware
 
@@ -25,7 +24,7 @@ class BotCore:
             raise ValueError('VK_BOT_TOKEN не найден в .env')
 
         self.bot = Bot(token=self.vk_token)
-        self.db = None
+        self.backend = BackendClient('vk')
         self._handlers_registered = False
         self._middlewares_registered = False
 
@@ -48,10 +47,10 @@ class BotCore:
 
     def register_middlewares(self) -> None:
         """Регистрирует middleware для message и callback событий."""
-        if self._middlewares_registered or not self.db:
+        if self._middlewares_registered:
             return
 
-        UserMiddleware.configure(self.db.session_maker, self.bot)
+        UserMiddleware.configure(self.backend, self.bot)
         BotMiddleware.configure(self.bot)
 
         self.bot.labeler.message_view.register_middleware(UserMiddleware)
@@ -62,12 +61,6 @@ class BotCore:
         self._middlewares_registered = True
         bot_logger.info('Middleware VK-бота зарегистрированы')
 
-    async def init_database(self) -> None:
-        """Инициализирует подключение к базе данных."""
-        bot_logger.info('Подключение к базе данных...')
-        self.db = await init_connection(DBConfig())
-        bot_logger.info('База данных подключена')
-
     async def start(self) -> None:
         """Запускает бота."""
         if not self._handlers_registered:
@@ -76,7 +69,7 @@ class BotCore:
                 'Вызовите register_handlers() перед запуском.'
             )
 
-        await self.init_database()
+        await self.backend.healthcheck()
         self.register_middlewares()
 
         bot_logger.info('Запуск VK-бота')
@@ -90,6 +83,4 @@ class BotCore:
         """Корректная остановка бота."""
         bot_logger.info('Остановка VK-бота')
 
-        if self.db and self.db.engine:
-            await self.db.engine.dispose()
-            bot_logger.info('Соединения с БД закрыты')
+        await self.backend.close()

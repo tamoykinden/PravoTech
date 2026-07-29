@@ -52,7 +52,11 @@ class CasesHandler(BaseHandlers):
         case, documents = await service.get_case_with_documents(case_id)
         text = await service.format_case_text(case)
 
-        keyboard = CaseDetailKeyboard(documents, case.id).get_markup()
+        keyboard = CaseDetailKeyboard(
+            documents,
+            case.id,
+            origin='all',
+        ).get_markup()
         keyboard.inline_keyboard.append(
             [InlineKeyboardButton(text=ButtonConfig.BACK_TO_CASES, callback_data='back_to_cases')]
         )
@@ -74,7 +78,11 @@ class CasesHandler(BaseHandlers):
         case, documents = await service.get_case_with_documents(case_id)
         text = await service.format_case_text(case)
 
-        keyboard = CaseDetailKeyboard(documents, case.id).get_markup()
+        keyboard = CaseDetailKeyboard(
+            documents,
+            case.id,
+            origin=f'cat-{category_id}',
+        ).get_markup()
         keyboard.inline_keyboard.append(
             [InlineKeyboardButton(text=ButtonConfig.BACK_TO_CASES, callback_data=f'back_to_cases_from_cat_{category_id}')]
         )
@@ -99,7 +107,8 @@ class CasesHandler(BaseHandlers):
             [InlineKeyboardButton(text=ButtonConfig.MAIN_MENU, callback_data='back_to_main_menu')]
         )
 
-        await callback.message.edit_text('📋 Выберите кейс:', reply_markup=keyboard)
+        await callback.message.delete()
+        await callback.message.answer('📋 Выберите кейс:', reply_markup=keyboard)
         await callback.answer()
 
     async def back_to_cases_by_category(self, callback: CallbackQuery, session: AsyncSession):

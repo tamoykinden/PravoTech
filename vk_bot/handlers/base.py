@@ -54,10 +54,7 @@ class BaseHandlers:
         )
 
     async def cleanup_current_and_previous(self, message: Message) -> None:
-        """Удаляет текущее сообщение пользователя и предыдущее сообщение бота."""
-
-        if message.conversation_message_id:
-            await self.safe_delete_message(message, message.conversation_message_id)
+        """Удаляет предыдущее сообщение бота (своё)."""
 
         if message.conversation_message_id and message.conversation_message_id > 1:
             await self.safe_delete_message(

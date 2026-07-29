@@ -3,6 +3,7 @@ from tg_bot.handlers import (
     cases_router,
     categories_router,
     common_router,
+    document_router,
     feedback_router,
     search_router,
 )
@@ -24,5 +25,6 @@ def create_bot() -> BotCore:
     bot_core.register_handlers(categories_router)
     bot_core.register_handlers(search_router)
     bot_core.register_handlers(feedback_router)
+    bot_core.register_handlers(document_router)
 
     return bot_core

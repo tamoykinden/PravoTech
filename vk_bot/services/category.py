@@ -1,21 +1,18 @@
-from typing import List, Optional
+"""Получение категорий через центральный backend."""
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from database.crud import CategoryCRUD
-from database.models import CaseCategory
+from backend.schemas import CategoryRead
 from vk_bot.services.base import BaseService
 
 
 class CategoryService(BaseService):
-    """Сервис для работы с категориями."""
+    """Сервис категорий VK-клиента."""
 
-    def __init__(self, session: AsyncSession):
-        super().__init__(session)
-        self.crud = CategoryCRUD(session)
+    async def get_all_categories(self) -> list[CategoryRead]:
+        """Возвращает все категории."""
 
-    async def get_all_categories(self) -> List[CaseCategory]:
-        return await self.crud.get_all()
+        return await self.session.get_categories()
 
-    async def get_category_by_id(self, category_id: int) -> Optional[CaseCategory]:
-        return await self.crud.get_by_id(category_id)
+    async def get_category_by_id(self, category_id: int) -> CategoryRead | None:
+        """Возвращает категорию по идентификатору."""
+
+        return await self.session.get_category(category_id)

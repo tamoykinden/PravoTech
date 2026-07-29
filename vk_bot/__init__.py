@@ -1,11 +1,11 @@
 from vk_bot.core import BotCore
 from vk_bot.handlers import (
-    common_router,
     cases_router,
     categories_router,
-    search_router,
-    feedback_router,
+    common_router,
     document_router,
+    feedback_router,
+    search_router,
 )
 
 

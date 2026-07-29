@@ -1,6 +1,6 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import GroupEventType
 from vkbottle.bot import BotLabeler, Message, MessageEvent
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import CallbackAction, MenuConfig, MessageConfig
 from database.models import VKUser
@@ -58,8 +58,7 @@ class CommonHandler(BaseHandlers):
             user: VKUser,
             session: AsyncSession,
         ):
-            user.pd_agreed = True
-            await session.commit()
+            user = await session.update_consent(user.id, True)
             await self.safe_answer_event(event)
             await self.safe_delete_event_message(event)
             await self.restore_main_menu(
@@ -100,7 +99,17 @@ class CommonHandler(BaseHandlers):
         async def back_to_main_menu(event: MessageEvent, state_dispenser):
             await VkDispatchSupport.safe_delete_state(state_dispenser, event.peer_id)
             await self.safe_answer_event(event)
+
+            # Удаляем текущее сообщение (клавиатура «Выберите действие»)
             await self.safe_delete_event_message(event)
+            # Удаляем предыдущее сообщение (файл)
+            if event.conversation_message_id and event.conversation_message_id > 1:
+                await self._delete_by_cmid(
+                    event.ctx_api,
+                    event.peer_id,
+                    event.conversation_message_id - 1,
+                )
+
             await self.restore_main_menu(
                 event.peer_id,
                 event.ctx_api,

@@ -1,6 +1,6 @@
+from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import BaseStateGroup
 from vkbottle.bot import BotLabeler, Message
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import ButtonConfig, CallbackAction, MenuConfig, MessageConfig
 from database.models import VKUser

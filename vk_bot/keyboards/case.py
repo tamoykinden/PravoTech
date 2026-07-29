@@ -4,29 +4,57 @@ from vk_bot.keyboards.base import BaseInlineKeyboard
 
 
 class CasesListKeyboard(BaseInlineKeyboard):
-    """Inline-клавиатура для списка кейсов."""
+    """Inline-клавиатура для списка кейсов с пагинацией (по 3)."""
 
-    def __init__(self, cases: list[Case]):
-        self.cases = cases
+    def __init__(self, cases: list[Case], page: int = 0, per_page: int = 3):
+        self.all_cases = cases
+        self.page = page
+        self.per_page = per_page
 
     def get_markup(self) -> str:
+        start = self.page * self.per_page
+        page_cases = self.all_cases[start:start + self.per_page]
+        total_pages = (len(self.all_cases) + self.per_page - 1) // self.per_page
+
         buttons = [
-            (case.title, BaseInlineKeyboard.make_payload(CallbackAction.CASE_LIST, id=case.id))
-            for case in self.cases
+            (case.title[:35], BaseInlineKeyboard.make_payload(CallbackAction.CASE_LIST, id=case.id))
+            for case in page_cases
         ]
-        return self._build_inline_markup(buttons)
+
+        if total_pages > 1:
+            next_page = self.page + 1 if self.page < total_pages - 1 else 0
+            prev_page = self.page - 1 if self.page > 0 else total_pages - 1
+            target = next_page if self.page < total_pages - 1 else prev_page
+            nav_label = f'Стр. {self.page + 1}/{total_pages}'
+            buttons.append((nav_label, BaseInlineKeyboard.make_payload('case_page', page=target)))
+
+        return self._build_inline_markup(buttons, row_width=1)
 
 
 class CaseDetailKeyboard(BaseInlineKeyboard):
     """Inline-клавиатура для деталей кейса (документы)."""
 
-    def __init__(self, documents: list[Document], case_id: int):
+    def __init__(
+        self,
+        documents: list[Document],
+        case_id: int,
+        origin: str = 'all',
+    ):
         self.documents = documents
         self.case_id = case_id
+        self.origin = origin
 
     def get_markup(self) -> str:
         buttons = [
-            (doc.title, BaseInlineKeyboard.make_payload(CallbackAction.DOCUMENT, id=doc.id))
+            (
+                doc.title[:35],
+                BaseInlineKeyboard.make_payload(
+                    CallbackAction.DOCUMENT,
+                    id=doc.id,
+                    case_id=self.case_id,
+                    origin=self.origin,
+                ),
+            )
             for doc in self.documents
         ]
-        return self._build_inline_markup(buttons)
+        return self._build_inline_markup(buttons, row_width=1)

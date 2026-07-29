@@ -1,9 +1,7 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from vkbottle import ABCAPI
 
+from backend.schemas import UserRead
 from config import LogConfig, MessageConfig, VkEnvConfig
-from database.crud import VKFeedbackCRUD
-from database.models import VKFeedback, VKUser
 from logger import bot_logger
 from vk_bot.services.base import BaseService
 from vk_bot.support.dispatch import VkDispatchSupport
@@ -12,17 +10,13 @@ from vk_bot.support.dispatch import VkDispatchSupport
 class FeedbackService(BaseService):
     """Сервис для обратной связи VK."""
 
-    def __init__(self, session: AsyncSession):
-        super().__init__(session)
-        self.crud = VKFeedbackCRUD(session)
-
-    async def save_feedback(self, user_id: int, message: str) -> VKFeedback:
-        return await self.crud.create(user_id=user_id, message=message)
+    async def save_feedback(self, user_id: int, message: str) -> None:
+        await self.session.create_feedback(user_id, message)
 
     async def notify_admin(
         self,
         api: ABCAPI,
-        user: VKUser,
+        user: UserRead,
         feedback_text: str,
     ) -> None:
         peer_id = VkEnvConfig.get_admin_peer_id()

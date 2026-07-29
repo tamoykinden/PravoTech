@@ -2,23 +2,22 @@ from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from database.crud import TGUserCRUD
+from bot_client import BackendClient, RemoteUserCRUD
 
 
 class UserMiddleware(BaseMiddleware):
     """Middleware для загрузки пользователя из БД."""
 
-    def __init__(self, session_maker: async_sessionmaker):
+    def __init__(self, backend: BackendClient):
         """
         Инициализация middleware.
 
         Args:
-            session_maker: Фабрика для создания сессий БД.
+            backend: Авторизованный клиент центрального API.
         """
 
-        self.session_maker = session_maker
+        self.backend = backend
         super().__init__()
 
     async def __call__(
@@ -43,12 +42,8 @@ class UserMiddleware(BaseMiddleware):
         else:
             return await handler(event, data)
 
-        async with self.session_maker() as session:
-            user_crud = TGUserCRUD(session)
-            user = await user_crud.get_or_create(telegram_id=telegram_id)
-
-            data['user'] = user
-            data['session'] = session
-            data['user_crud'] = user_crud
-
-            return await handler(event, data)
+        user = await self.backend.get_or_create_user(telegram_id)
+        data['user'] = user
+        data['session'] = self.backend
+        data['user_crud'] = RemoteUserCRUD(self.backend)
+        return await handler(event, data)

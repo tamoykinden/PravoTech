@@ -6,8 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from dotenv import load_dotenv
 
-from config import DBConfig
-from database.base import Database, init_connection
+from bot_client import BackendClient
 from logger import bot_logger
 from tg_bot.middleware.pd_agreement import PDAgreementMiddleware
 from tg_bot.middleware.user import UserMiddleware
@@ -60,7 +59,7 @@ class BotCore:
             default=DefaultBotProperties(parse_mode='HTML')
         )
         self.dp: Dispatcher = Dispatcher()
-        self.db: Optional[Database] = None
+        self.backend = BackendClient('telegram')
         self._handlers_registered: bool = False
 
         bot_logger.info('Ядро бота инициализировано')
@@ -79,20 +78,6 @@ class BotCore:
         self.dp.include_router(router)
         self._handlers_registered = True
 
-    async def init_database(self):
-        """
-        Инициализация подключения к базе данных.
-
-        Создает пул соединений с PostgreSQL и проверяет доступность БД.
-        Должна вызываться перед запуском бота.
-        """
-
-        bot_logger.info('Подключение к базе данных...')
-
-        self.db = await init_connection(DBConfig())
-
-        bot_logger.info('База данных подключена')
-
     async def start(self):
         """
         Запуск бота в режиме long-polling.
@@ -109,9 +94,8 @@ class BotCore:
         if not self._handlers_registered:
             raise RuntimeError('Обработчики не зарегистрированы. Вызовите register_handlers() перед запуском.')
 
-        await self.init_database()
-
-        user_middleware = UserMiddleware(self.db.session_maker)
+        await self.backend.healthcheck()
+        user_middleware = UserMiddleware(self.backend)
         pd_middleware = PDAgreementMiddleware()
 
         self.dp.message.middleware(user_middleware)
@@ -140,8 +124,5 @@ class BotCore:
 
         bot_logger.info('Остановка бота')
 
-        if self.db and self.db.engine:
-            await self.db.engine.dispose()
-            bot_logger.info('Соединения с БД закрыты')
-
+        await self.backend.close()
         await self.bot.session.close()

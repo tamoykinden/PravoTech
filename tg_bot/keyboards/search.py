@@ -1,27 +1,21 @@
-from __future__ import annotations
-
-from typing import List
-
-from aiogram.types import InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from database.models import Case
-from tg_bot.keyboards.base import BaseInlineKeyboard
 
 
-class SearchCasesListKeyboard(BaseInlineKeyboard):
-    """Инлайн-клавиатура для списка кейсов из поиска."""
+class SearchCasesListKeyboard:
+    """Inline-клавиатура для списка кейсов из поиска."""
 
-    def __init__(self, cases: List[Case], row_width: int = 1):
-        super().__init__(row_width=row_width)
+    def __init__(self, cases: list[Case]):
         self.cases = cases
 
-    def get_markup(self):
+    def get_markup(self) -> InlineKeyboardMarkup:
         buttons = []
         for case in self.cases:
-            buttons.append(
+            buttons.append([
                 InlineKeyboardButton(
-                    text=case.title,
+                    text=case.title[:50],
                     callback_data=f'case_search_{case.id}'
                 )
-            )
-        return self._build_inline_markup(buttons)
+            ])
+        return InlineKeyboardMarkup(inline_keyboard=buttons)

@@ -113,7 +113,11 @@ class SearchHandler(BaseHandlers):
         case, documents = await case_service.get_case_with_documents(case_id)
         text = await case_service.format_case_text(case)
 
-        keyboard = CaseDetailKeyboard(documents, case.id).get_markup()
+        keyboard = CaseDetailKeyboard(
+            documents,
+            case.id,
+            origin='search',
+        ).get_markup()
         keyboard.inline_keyboard.append(
             [InlineKeyboardButton(text=ButtonConfig.BACK_TO_SEARCH_RESULTS, callback_data='back_to_search_results')]
         )
@@ -138,11 +142,15 @@ class SearchHandler(BaseHandlers):
             return
 
         case_service = CaseService(session)
-        cases = []
-        for case_id in case_ids:
-            case = await case_service.case_crud.get_by_id(case_id)
-            if case:
-                cases.append(case)
+        available_cases = {
+            case.id: case
+            for case in await case_service.get_all_cases()
+        }
+        cases = [
+            available_cases[case_id]
+            for case_id in case_ids
+            if case_id in available_cases
+        ]
 
         keyboard = SearchCasesListKeyboard(cases).get_markup()
         keyboard.inline_keyboard.append(
