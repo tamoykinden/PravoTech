@@ -1,6 +1,15 @@
-import datetime
+from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, Computed, DateTime, ForeignKey, String, Text
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Computed,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -58,6 +67,9 @@ class Case(Base):
     """Кейс (пошаговое решение)."""
 
     __tablename__ = 'cases'
+    __table_args__ = (
+        Index('ix_cases_search_vector', 'search_vector', postgresql_using='gin'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(
