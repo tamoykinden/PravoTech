@@ -1,0 +1,147 @@
+name: ${CONTAINER_NAME:-pravoteka}
+
+x-app: &app
+  build:
+    context: .
+  image: pravoteka-app:local
+  restart: unless-stopped
+  networks:
+    - private
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "5"
+
+services:
+  postgres:
+    container_name: ${DB_CONTAINER_NAME:-pravoteka-postgres}
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    <<: *app
+    container_name: ${CONTAINER_NAME:-pravoteka}-migrate
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    <<: *app
+    container_name: ${CONTAINER_NAME:-pravoteka}-backend
+    command: ["python", "-m", "backend"]
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      YANDEX_DISK_TOKEN: ${YANDEX_DISK_TOKEN}
+      YANDEX_DISK_BASE_PATH: ${YANDEX_DISK_BASE_PATH}
+      TG_BACKEND_API_KEY: ${TG_BACKEND_API_KEY}
+      VK_BACKEND_API_KEY: ${VK_BACKEND_API_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      ENVIRONMENT: production
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: "8000"
+      FORWARDED_ALLOW_IPS: "*"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  telegram-bot:
+    <<: *app
+    container_name: ${CONTAINER_NAME:-pravoteka}-telegram
+    command: ["python", "-m", "tg_bot"]
+    environment:
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN}
+      TG_PROXY_URL: ${TG_PROXY_URL:-}
+      BOT_CHAT_ID: ${BOT_CHAT_ID:-}
+      BACKEND_URL: http://backend:8000
+      TG_BACKEND_API_KEY: ${TG_BACKEND_API_KEY}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  vk-bot:
+    <<: *app
+    container_name: ${CONTAINER_NAME:-pravoteka}-vk
+    command: ["python", "-m", "vk_bot"]
+    environment:
+      VK_BOT_TOKEN: ${VK_BOT_TOKEN}
+      VK_ADMIN_PEER_ID: ${VK_ADMIN_PEER_ID:-}
+      VK_ADMIN_CHAT_ID: ${VK_ADMIN_CHAT_ID:-}
+      VK_GROUP_ID: ${VK_GROUP_ID:-}
+      BACKEND_URL: http://backend:8000
+      VK_BACKEND_API_KEY: ${VK_BACKEND_API_KEY}
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  caddy:
+    container_name: ${CONTAINER_NAME:-pravoteka}-caddy
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - private
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  private:
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
